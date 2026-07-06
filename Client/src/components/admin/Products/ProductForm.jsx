@@ -1,0 +1,520 @@
+import { useState, useEffect } from "react";
+import { X, Save, Plus, GripVertical } from "lucide-react";
+
+export default function ProductForm({
+  product,
+  onSave,
+  onClose,
+  categories,
+  darkMode,
+}) {
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    price: "",
+    originalPrice: "",
+    discount: "0",
+    stock: "",
+    category: "",
+    color: "",
+    material: "",
+    sku: "",
+    availability: "In Stock",
+    images: [],
+    specifications: {
+      material: "",
+      color: "",
+      style: "",
+      assembly: "",
+      weightCapacity: "",
+      warranty: "",
+    },
+  });
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
+
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        name: product.name,
+        description: product.description || "",
+        price: product.price.toString(),
+        originalPrice: product.originalPrice?.toString() || "",
+        discount: product.discount?.toString() || "0",
+        stock: product.stock.toString(),
+        category: product.category,
+        color: product.color || "",
+        material: product.material || "",
+        sku: product.sku || "",
+        availability: product.availability || "In Stock",
+        images: product.images || [],
+        specifications: {
+          material: product.specifications?.material || "",
+          color: product.specifications?.color || "",
+          style: product.specifications?.style || "",
+          assembly: product.specifications?.assembly || "",
+          weightCapacity: product.specifications?.weightCapacity || "",
+          warranty: product.specifications?.warranty || "",
+        },
+      });
+      setImagePreviews(product.images || []);
+    }
+  }, [product]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter((file) => {
+      const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+      const isValidType = validTypes.includes(file.type);
+      const isValidSize = file.size <= 5 * 1024 * 1024;
+      return isValidType && isValidSize;
+    });
+
+    const newFiles = [...imageFiles, ...validFiles];
+    if (newFiles.length > 4) return;
+
+    setImageFiles(newFiles);
+    const previews = newFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews(previews);
+  };
+
+  const removeImage = (index) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setImageFiles(newFiles);
+    setImagePreviews(newPreviews);
+  };
+
+  const handleSubmit = () => {
+    if (
+      !formData.name ||
+      !formData.price ||
+      !formData.category ||
+      !formData.stock
+    ) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    const productData = {
+      id: product ? product.id : Date.now(),
+      name: formData.name,
+      description: formData.description,
+      price: parseFloat(formData.price),
+      originalPrice: formData.originalPrice
+        ? parseFloat(formData.originalPrice)
+        : null,
+      discount: formData.discount ? parseInt(formData.discount) : 0,
+      stock: parseInt(formData.stock),
+      category: formData.category,
+      color: formData.color,
+      material: formData.material,
+      sku:
+        formData.sku ||
+        `VLR-${formData.category.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-6)}`,
+      availability: parseInt(formData.stock) > 0 ? "In Stock" : "Out of Stock",
+      status: parseInt(formData.stock) > 0 ? "Active" : "Out of Stock",
+      images:
+        imagePreviews.length > 0
+          ? imagePreviews
+          : ["/assets/images/placeholder.jpg"],
+      image:
+        imagePreviews.length > 0
+          ? imagePreviews[0]
+          : "/assets/images/placeholder.jpg",
+      specifications: {
+        material: formData.specifications.material || formData.material || "",
+        color: formData.specifications.color || formData.color || "",
+        style: formData.specifications.style || "",
+        assembly: formData.specifications.assembly || "",
+        weightCapacity: formData.specifications.weightCapacity || "",
+        warranty: formData.specifications.warranty || "",
+      },
+      reviews: product?.reviews || 0,
+      rating: product?.rating || 0,
+    };
+
+    onSave(productData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div
+        className={`${darkMode ? "bg-gray-800" : "bg-white"} rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto`}
+      >
+        <div
+          className={`flex items-center justify-between p-6 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+        >
+          <h2
+            className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-800"}`}
+          >
+            {product ? "Edit Product" : "Add New Product"}
+          </h2>
+          <button
+            onClick={onClose}
+            className={`${darkMode ? "text-gray-400 hover:text-white" : "text-gray-400 hover:text-gray-600"}`}
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left Column */}
+            <div>
+              <div className="mb-4">
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="Enter product name"
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows="3"
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="Enter product description"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Price (ETB) *
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Original Price
+                  </label>
+                  <input
+                    type="number"
+                    name="originalPrice"
+                    value={formData.originalPrice}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Discount (%)
+                  </label>
+                  <input
+                    type="number"
+                    name="discount"
+                    value={formData.discount}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Stock *
+                  </label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Category *
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  >
+                    <option value="">Select category</option>
+                    {categories
+                      .filter((c) => c !== "All")
+                      .map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Color
+                  </label>
+                  <input
+                    type="text"
+                    name="color"
+                    value={formData.color}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="e.g., Brown, Gray"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    Material
+                  </label>
+                  <input
+                    type="text"
+                    name="material"
+                    value={formData.material}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="e.g., Fabric, Wood"
+                  />
+                </div>
+                <div>
+                  <label
+                    className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                  >
+                    SKU
+                  </label>
+                  <input
+                    type="text"
+                    name="sku"
+                    value={formData.sku}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                    placeholder="Auto-generated if left blank"
+                  />
+                </div>
+              </div>
+
+              {/* Images */}
+              <div className="mb-4">
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Product Images (2-4 images, JPG/PNG, max 5MB each)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div
+                      key={index}
+                      className="relative w-16 h-16 border rounded-lg overflow-hidden"
+                    >
+                      <img
+                        src={preview}
+                        alt={`Product ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {imagePreviews.length < 4 && (
+                    <label className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-[#DA4C2F] transition-colors">
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg,.png"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        multiple
+                      />
+                      <Plus className="w-6 h-6 text-gray-400" />
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {imagePreviews.length}/4 images
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Technical Specifications */}
+          <div
+            className={`mt-4 p-4 border rounded-lg ${darkMode ? "border-gray-700" : "border-gray-200"}`}
+          >
+            <h4
+              className={`font-semibold ${darkMode ? "text-white" : "text-gray-800"} mb-3 flex items-center gap-2`}
+            >
+              <GripVertical className="w-4 h-4 text-[#DA4C2F]" />
+              Technical Specifications
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Material
+                </label>
+                <input
+                  type="text"
+                  name="specifications.material"
+                  value={formData.specifications.material}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="e.g., Premium fabric, solid wood frame"
+                />
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Color Options
+                </label>
+                <input
+                  type="text"
+                  name="specifications.color"
+                  value={formData.specifications.color}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="e.g., Brown, Gray, Black"
+                />
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Style
+                </label>
+                <input
+                  type="text"
+                  name="specifications.style"
+                  value={formData.specifications.style}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="e.g., Modern, Contemporary"
+                />
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Assembly Required
+                </label>
+                <input
+                  type="text"
+                  name="specifications.assembly"
+                  value={formData.specifications.assembly}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="e.g., Required (tools included)"
+                />
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Weight Capacity
+                </label>
+                <input
+                  type="text"
+                  name="specifications.weightCapacity"
+                  value={formData.specifications.weightCapacity}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="e.g., 600 lbs"
+                />
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
+                >
+                  Warranty
+                </label>
+                <input
+                  type="text"
+                  name="specifications.warranty"
+                  value={formData.specifications.warranty}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
+                  placeholder="e.g., 2 years limited"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${darkMode ? "text-gray-300 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-100"} transition-colors`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="bg-[#DA4C2F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#c43d22] transition-colors flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              {product ? "Update Product" : "Save Product"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
