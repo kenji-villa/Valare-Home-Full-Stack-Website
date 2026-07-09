@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Save, Plus, GripVertical } from "lucide-react";
+import { X, Save, Plus, GripVertical, Upload } from "lucide-react";
+import {
+  uploadProductImages,
+  createProduct,
+  updateProduct,
+} from "../../../services/productService";
 
 export default function ProductForm({
   product,
@@ -32,6 +37,7 @@ export default function ProductForm({
   });
   const [imagePreviews, setImagePreviews] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -77,31 +83,68 @@ export default function ProductForm({
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     const validFiles = files.filter((file) => {
-      const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+      const validTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
       const isValidType = validTypes.includes(file.type);
       const isValidSize = file.size <= 5 * 1024 * 1024;
       return isValidType && isValidSize;
     });
 
+    if (validFiles.length !== files.length) {
+      alert(
+        "Some files were invalid. Please use JPG, PNG, GIF, or WEBP under 5MB.",
+      );
+      return;
+    }
+
     const newFiles = [...imageFiles, ...validFiles];
-    if (newFiles.length > 4) return;
+    if (newFiles.length > 4) {
+      alert("Maximum 4 images allowed.");
+      return;
+    }
 
     setImageFiles(newFiles);
     const previews = newFiles.map((file) => URL.createObjectURL(file));
     setImagePreviews(previews);
+
+    // Upload images to server
+    try {
+      setUploading(true);
+      const response = await uploadProductImages(validFiles);
+      if (response.success) {
+        const uploadedPaths = response.images.map((img) => img.path);
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, ...uploadedPaths],
+        }));
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload images. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const removeImage = (index) => {
     const newFiles = imageFiles.filter((_, i) => i !== index);
     const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    const newPaths = formData.images.filter((_, i) => i !== index);
     setImageFiles(newFiles);
     setImagePreviews(newPreviews);
+    setFormData((prev) => ({ ...prev, images: newPaths }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Validate required fields
     if (
       !formData.name ||
       !formData.price ||
@@ -112,10 +155,16 @@ export default function ProductForm({
       return;
     }
 
+    // Validate images
+    if (formData.images.length === 0) {
+      alert("Please upload at least one image.");
+      return;
+    }
+
+    // Prepare product data
     const productData = {
-      id: product ? product.id : Date.now(),
       name: formData.name,
-      description: formData.description,
+      description: formData.description || "",
       price: parseFloat(formData.price),
       originalPrice: formData.originalPrice
         ? parseFloat(formData.originalPrice)
@@ -123,21 +172,11 @@ export default function ProductForm({
       discount: formData.discount ? parseInt(formData.discount) : 0,
       stock: parseInt(formData.stock),
       category: formData.category,
-      color: formData.color,
-      material: formData.material,
-      sku:
-        formData.sku ||
-        `VLR-${formData.category.substring(0, 2).toUpperCase()}-${Date.now().toString().slice(-6)}`,
-      availability: parseInt(formData.stock) > 0 ? "In Stock" : "Out of Stock",
-      status: parseInt(formData.stock) > 0 ? "Active" : "Out of Stock",
-      images:
-        imagePreviews.length > 0
-          ? imagePreviews
-          : ["/assets/images/placeholder.jpg"],
-      image:
-        imagePreviews.length > 0
-          ? imagePreviews[0]
-          : "/assets/images/placeholder.jpg",
+      color: formData.color || "",
+      material: formData.material || "",
+      sku: formData.sku || undefined,
+      images: formData.images,
+      coverImage: formData.images[0],
       specifications: {
         material: formData.specifications.material || formData.material || "",
         color: formData.specifications.color || formData.color || "",
@@ -146,11 +185,32 @@ export default function ProductForm({
         weightCapacity: formData.specifications.weightCapacity || "",
         warranty: formData.specifications.warranty || "",
       },
-      reviews: product?.reviews || 0,
-      rating: product?.rating || 0,
     };
 
-    onSave(productData);
+    try {
+      let savedProduct;
+
+      if (product) {
+        // Update existing product
+        const response = await updateProduct(product._id, productData);
+        if (response.success) {
+          savedProduct = response.product;
+          onSave(savedProduct);
+        }
+      } else {
+        // Create new product
+        const response = await createProduct(productData);
+        if (response.success) {
+          savedProduct = response.product;
+          onSave(savedProduct);
+        }
+      }
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert(
+        `Failed to ${product ? "update" : "create"} product: ${error.message}`,
+      );
+    }
   };
 
   return (
@@ -176,7 +236,7 @@ export default function ProductForm({
 
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left Column */}
+            {/* Left Column - Basic Info */}
             <div>
               <div className="mb-4">
                 <label
@@ -274,7 +334,7 @@ export default function ProductForm({
               </div>
             </div>
 
-            {/* Right Column */}
+            {/* Right Column - Category, Images, etc. */}
             <div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
@@ -348,12 +408,12 @@ export default function ProductForm({
                 </div>
               </div>
 
-              {/* Images */}
+              {/* Images Upload */}
               <div className="mb-4">
                 <label
                   className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
                 >
-                  Product Images (2-4 images, JPG/PNG, max 5MB each)
+                  Product Images (2-4 images, max 5MB each)
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {imagePreviews.map((preview, index) => (
@@ -368,22 +428,29 @@ export default function ProductForm({
                       />
                       <button
                         onClick={() => removeImage(index)}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                       >
                         ×
                       </button>
                     </div>
                   ))}
                   {imagePreviews.length < 4 && (
-                    <label className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-[#DA4C2F] transition-colors">
+                    <label
+                      className={`w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-[#DA4C2F] transition-colors ${darkMode ? "border-gray-600" : "border-gray-300"}`}
+                    >
                       <input
                         type="file"
-                        accept=".jpg,.jpeg,.png"
+                        accept=".jpg,.jpeg,.png,.gif,.webp"
                         onChange={handleImageUpload}
                         className="hidden"
                         multiple
+                        disabled={uploading}
                       />
-                      <Plus className="w-6 h-6 text-gray-400" />
+                      {uploading ? (
+                        <div className="w-6 h-6 border-2 border-[#DA4C2F] border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <Upload className="w-6 h-6 text-gray-400" />
+                      )}
                     </label>
                   )}
                 </div>
@@ -507,10 +574,15 @@ export default function ProductForm({
             </button>
             <button
               onClick={handleSubmit}
-              className="bg-[#DA4C2F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#c43d22] transition-colors flex items-center gap-2"
+              disabled={uploading}
+              className="bg-[#DA4C2F] text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-[#c43d22] transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              {product ? "Update Product" : "Save Product"}
+              {uploading
+                ? "Uploading..."
+                : product
+                  ? "Update Product"
+                  : "Save Product"}
             </button>
           </div>
         </div>

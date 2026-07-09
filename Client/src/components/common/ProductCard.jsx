@@ -46,6 +46,15 @@ export default function ProductCard({
     return stars;
   };
 
+  const handleAddToCart = () => {
+    addToCart({
+      id: productId,
+      name: productName,
+      price: productPrice,
+      image: productImage,
+    });
+  };
+
   // Parse price for display
   const displayPrice = price.replace("ETB", "").trim();
   const displayOriginalPrice = originalPrice

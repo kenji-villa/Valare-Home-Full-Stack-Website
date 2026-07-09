@@ -23,7 +23,7 @@ export default function RecentOrders({ orders }) {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-[#DA4C2F]">
-                ETB {order.total.toFixed(2)}
+                ETB {order.total?.toFixed(2) || order.total}
               </span>
               <OrderStatusBadge status={order.status} />
             </div>

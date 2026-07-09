@@ -73,7 +73,7 @@ export default function OrderTable({
                   {order.date}
                 </td>
                 <td className="px-6 py-4 text-sm font-semibold text-[#DA4C2F]">
-                  ETB {order.total.toFixed(2)}
+                  ETB {order.total?.toFixed(2) || order.total}
                 </td>
                 <td className="px-6 py-4">
                   <select

@@ -2,6 +2,23 @@ import { Edit, Trash2, MoreVertical } from "lucide-react";
 import OrderStatusBadge from "../Orders/OrderStatusBadge";
 
 export default function ProductTable({ products, onEdit, onDelete, darkMode }) {
+  const getImageUrl = (product) => {
+    if (product.coverImage) {
+      // If it's a server path, prepend with the base URL
+      if (product.coverImage.startsWith("/uploads/")) {
+        return `http://localhost:3001${product.coverImage}`;
+      }
+      return product.coverImage;
+    }
+    if (product.images && product.images.length > 0) {
+      if (product.images[0].startsWith("/uploads/")) {
+        return `http://localhost:3001${product.images[0]}`;
+      }
+      return product.images[0];
+    }
+    return "/assets/images/placeholder.jpg";
+  };
+
   return (
     <div
       className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white"} rounded-lg shadow-sm border overflow-hidden`}
@@ -47,15 +64,19 @@ export default function ProductTable({ products, onEdit, onDelete, darkMode }) {
           >
             {products.map((product) => (
               <tr
-                key={product.id}
+                key={product._id || product.id}
                 className={`${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition-colors`}
               >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <img
-                      src={product.image}
+                      src={getImageUrl(product)}
                       alt={product.name}
                       className="w-10 h-10 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/assets/images/placeholder.jpg";
+                      }}
                     />
                     <span
                       className={`font-medium text-sm ${darkMode ? "text-white" : "text-gray-800"}`}
@@ -70,7 +91,7 @@ export default function ProductTable({ products, onEdit, onDelete, darkMode }) {
                   {product.category}
                 </td>
                 <td className="px-6 py-4 text-sm font-semibold text-[#DA4C2F]">
-                  ETB {product.price.toFixed(2)}
+                  ETB {product.price?.toFixed(2) || product.price}
                 </td>
                 <td
                   className={`px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
@@ -78,7 +99,7 @@ export default function ProductTable({ products, onEdit, onDelete, darkMode }) {
                   {product.stock}
                 </td>
                 <td className="px-6 py-4">
-                  <OrderStatusBadge status={product.status} />
+                  <OrderStatusBadge status={product.status || "Active"} />
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -89,7 +110,7 @@ export default function ProductTable({ products, onEdit, onDelete, darkMode }) {
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onDelete(product.id)}
+                      onClick={() => onDelete(product._id || product.id)}
                       className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />

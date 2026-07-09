@@ -1,79 +1,386 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
+const { validationResult } = require('express-validator');
 
-// @desc    Get all products with filtering and pagination
+// @desc    Get all products with filtering, sorting, pagination
 // @route   GET /api/products
 // @access  Public
 const getProducts = async (req, res) => {
   try {
-    const { 
-      category, 
-      minPrice, 
-      maxPrice, 
-      color, 
-      material,
-      rating,
-      search,
-      sort = 'createdAt',
-      page = 1,
-      limit = 12
-    } = req.query;
-
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+    const sort = req.query.sort || '-createdAt';
+    
     // Build filter object
     const filter = { status: 'Active' };
     
-    if (category) filter.category = category;
-    if (color) filter.color = color;
-    if (material) filter.material = material;
-    if (minPrice || maxPrice) {
+    // Category filter
+    if (req.query.category && req.query.category !== 'All') {
+      filter.category = req.query.category;
+    }
+    
+    // Price range filter
+    if (req.query.minPrice || req.query.maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = parseFloat(minPrice);
-      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+      if (req.query.minPrice) filter.price.$gte = parseFloat(req.query.minPrice);
+      if (req.query.maxPrice) filter.price.$lte = parseFloat(req.query.maxPrice);
     }
-    if (rating) {
-      filter.averageRating = { $gte: parseFloat(rating) };
+    
+    // Color filter
+    if (req.query.color) {
+      filter.color = req.query.color;
     }
-    if (search) {
+    
+    // Material filter
+    if (req.query.material) {
+      filter.material = req.query.material;
+    }
+    
+    // Rating filter
+    if (req.query.minRating) {
+      filter.averageRating = { $gte: parseFloat(req.query.minRating) };
+    }
+    
+    // Search filter
+    if (req.query.search) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } },
+        { category: { $regex: req.query.search, $options: 'i' } }
       ];
     }
-
-    // Pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // Sorting
-    let sortOption = {};
+    
+    // Build sort object
+    let sortObj = {};
     switch(sort) {
-      case 'price_low': sortOption = { price: 1 }; break;
-      case 'price_high': sortOption = { price: -1 }; break;
-      case 'rating': sortOption = { averageRating: -1 }; break;
-      case 'newest': sortOption = { createdAt: -1 }; break;
-      default: sortOption = { createdAt: -1 };
+      case 'price_low':
+        sortObj = { price: 1 };
+        break;
+      case 'price_high':
+        sortObj = { price: -1 };
+        break;
+      case 'rating':
+        sortObj = { averageRating: -1 };
+        break;
+      case 'newest':
+        sortObj = { createdAt: -1 };
+        break;
+      default:
+        sortObj = { createdAt: -1 };
     }
-
+    
     const products = await Product.find(filter)
-      .sort(sortOption)
+      .sort(sortObj)
       .skip(skip)
-      .limit(parseInt(limit));
-
+      .limit(limit);
+    
     const total = await Product.countDocuments(filter);
-
+    
     res.json({
       success: true,
       products,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page,
+        limit,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / limit)
       }
     });
   } catch (error) {
     console.error('Get products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get products',
+      message: 'Failed to fetch products',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get single product by ID
+// @route   GET /api/products/:id
+// @access  Public
+const getProductById = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    console.error('Get product error:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Create new product
+// @route   POST /api/products
+// @access  Private (Admin only)
+const createProduct = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+    
+    const productData = req.body;
+    
+    // Ensure images is an array of strings
+    if (typeof productData.images === 'string') {
+      productData.images = [productData.images];
+    }
+    
+    // Set cover image as first image if not provided
+    if (!productData.coverImage && productData.images && productData.images.length > 0) {
+      productData.coverImage = productData.images[0];
+    }
+    
+    // Calculate discount if originalPrice is provided
+    if (productData.originalPrice && productData.originalPrice > productData.price) {
+      productData.discount = Math.round(((productData.originalPrice - productData.price) / productData.originalPrice) * 100);
+    } else {
+      productData.discount = 0;
+    }
+    
+    // Set status based on stock
+    if (productData.stock === 0 || productData.stock === '0') {
+      productData.status = 'Out of Stock';
+    } else {
+      productData.status = 'Active';
+    }
+    
+    const product = await Product.create(productData);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      product
+    });
+  } catch (error) {
+    console.error('Create product error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'SKU already exists'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Update product
+// @route   PUT /api/products/:id
+// @access  Private (Admin only)
+const updateProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    const updateData = req.body;
+    
+    // Recalculate discount if price or originalPrice changed
+    if (updateData.price || updateData.originalPrice) {
+      const newPrice = updateData.price || product.price;
+      const newOriginalPrice = updateData.originalPrice || product.originalPrice;
+      
+      if (newOriginalPrice && newOriginalPrice > newPrice) {
+        updateData.discount = Math.round(((newOriginalPrice - newPrice) / newOriginalPrice) * 100);
+      } else {
+        updateData.discount = 0;
+      }
+    }
+    
+    // Update status based on stock
+    if (updateData.stock !== undefined) {
+      updateData.status = updateData.stock === 0 ? 'Out of Stock' : 'Active';
+    }
+    
+    const updatedProduct = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      product: updatedProduct
+    });
+  } catch (error) {
+    console.error('Update product error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'SKU already exists'
+      });
+    }
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Delete product
+// @route   DELETE /api/products/:id
+// @access  Private (Admin only)
+const deleteProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    console.log(`Attempting to delete product with ID: ${productId}`);
+    
+    // Check if ID is provided
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID is required'
+      });
+    }
+    
+    // Check if ID is valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+    
+    // Find and delete the product
+    const product = await Product.findByIdAndDelete(productId);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    console.log(`Product deleted successfully: ${product.name} (${product._id})`);
+    
+    res.json({
+      success: true,
+      message: 'Product deleted successfully',
+      product: {
+        id: product._id,
+        name: product.name
+      }
+    });
+  } catch (error) {
+    console.error('Delete product error:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete product',
+      error: error.message
+    });
+  }
+};
+
+
+
+// @desc    Add product rating
+// @route   POST /api/products/:id/rate
+// @access  Private
+const addRating = async (req, res) => {
+  try {
+    const { rating, review } = req.body;
+    const productId = req.params.id;
+    const userId = req.user._id;
+    
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+    
+    const product = await Product.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Check if user already rated this product
+    const existingRating = product.ratings.find(r => r.user.toString() === userId.toString());
+    
+    if (existingRating) {
+      // Update existing rating
+      existingRating.rating = rating;
+      if (review) existingRating.review = review;
+      existingRating.date = new Date();
+    } else {
+      // Add new rating
+      product.ratings.push({
+        user: userId,
+        rating,
+        review: review || ''
+      });
+    }
+    
+    // Recalculate average rating
+    product.calculateAverageRating();
+    await product.save();
+    
+    res.json({
+      success: true,
+      message: 'Rating added successfully',
+      averageRating: product.averageRating,
+      reviewCount: product.reviewCount
+    });
+  } catch (error) {
+    console.error('Add rating error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add rating',
       error: error.message
     });
   }
@@ -87,7 +394,7 @@ const getFeaturedProducts = async (req, res) => {
     const products = await Product.find({ isFeatured: true, status: 'Active' })
       .limit(6)
       .sort({ createdAt: -1 });
-
+    
     res.json({
       success: true,
       products
@@ -96,13 +403,13 @@ const getFeaturedProducts = async (req, res) => {
     console.error('Get featured products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get featured products',
+      message: 'Failed to fetch featured products',
       error: error.message
     });
   }
 };
 
-// @desc    Get special products
+// @desc    Get special products (display only)
 // @route   GET /api/products/special
 // @access  Public
 const getSpecialProducts = async (req, res) => {
@@ -110,7 +417,7 @@ const getSpecialProducts = async (req, res) => {
     const products = await Product.find({ isSpecial: true, status: 'Active' })
       .limit(6)
       .sort({ createdAt: -1 });
-
+    
     res.json({
       success: true,
       products
@@ -119,169 +426,43 @@ const getSpecialProducts = async (req, res) => {
     console.error('Get special products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get special products',
+      message: 'Failed to fetch special products',
       error: error.message
     });
   }
 };
 
-// @desc    Get single product by ID
-// @route   GET /api/products/:id
+// @desc    Get related products
+// @route   GET /api/products/:id/related
 // @access  Public
-const getProductById = async (req, res) => {
+const getRelatedProducts = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id)
-      .populate('ratings.user', 'username email');
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      product
-    });
-  } catch (error) {
-    console.error('Get product error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get product',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Create new product
-// @route   POST /api/products
-// @access  Private/Admin
-const createProduct = async (req, res) => {
-  try {
-    const productData = req.body;
+    const product = await Product.findById(req.params.id);
     
-    // Handle images from multer
-    if (req.files && req.files.length > 0) {
-      const imageUrls = req.files.map(file => `/uploads/${file.filename}`);
-      productData.images = imageUrls;
-      productData.coverImage = imageUrls[0];
-    }
-
-    const product = await Product.create(productData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Product created successfully',
-      product
-    });
-  } catch (error) {
-    console.error('Create product error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create product',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Update product
-// @route   PUT /api/products/:id
-// @access  Private/Admin
-const updateProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
       });
     }
-
-    // Handle images from multer
-    if (req.files && req.files.length > 0) {
-      const imageUrls = req.files.map(file => `/uploads/${file.filename}`);
-      req.body.images = imageUrls;
-      req.body.coverImage = imageUrls[0];
-    }
-
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
+    
+    const relatedProducts = await Product.find({
+      _id: { $ne: product._id },
+      category: product.category,
+      status: 'Active'
+    })
+      .limit(4)
+      .sort({ createdAt: -1 });
+    
     res.json({
       success: true,
-      message: 'Product updated successfully',
-      product: updatedProduct
+      products: relatedProducts
     });
   } catch (error) {
-    console.error('Update product error:', error);
+    console.error('Get related products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update product',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Delete product
-// @route   DELETE /api/products/:id
-// @access  Private/Admin
-const deleteProduct = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    await product.deleteOne();
-
-    res.json({
-      success: true,
-      message: 'Product deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete product error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete product',
-      error: error.message
-    });
-  }
-};
-
-// @desc    Update product status
-// @route   PUT /api/products/:id/status
-// @access  Private/Admin
-const updateProductStatus = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    product.status = status;
-    await product.save();
-
-    res.json({
-      success: true,
-      message: 'Product status updated successfully',
-      product
-    });
-  } catch (error) {
-    console.error('Update product status error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update product status',
+      message: 'Failed to fetch related products',
       error: error.message
     });
   }
@@ -289,11 +470,12 @@ const updateProductStatus = async (req, res) => {
 
 module.exports = {
   getProducts,
-  getFeaturedProducts,
-  getSpecialProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
-  updateProductStatus
+  addRating,
+  getFeaturedProducts,
+  getSpecialProducts,
+  getRelatedProducts
 };

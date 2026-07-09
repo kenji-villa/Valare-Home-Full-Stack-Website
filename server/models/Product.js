@@ -20,7 +20,8 @@ const ProductSchema = new mongoose.Schema({
   },
   originalPrice: {
     type: Number,
-    min: [0, 'Original price cannot be negative']
+    min: [0, 'Original price cannot be negative'],
+    default: null
   },
   discount: {
     type: Number,
@@ -134,7 +135,7 @@ ProductSchema.methods.calculateAverageRating = function() {
   }
   
   const total = this.ratings.reduce((sum, r) => sum + r.rating, 0);
-  this.averageRating = (total / this.ratings.length);
+  this.averageRating = parseFloat((total / this.ratings.length).toFixed(1));
   this.reviewCount = this.ratings.length;
 };
 
