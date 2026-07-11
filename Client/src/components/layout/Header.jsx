@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import { LayoutDashboard, User } from "lucide-react";
 import {
   CircleUser,
   Star,
@@ -57,6 +58,11 @@ export default function Header() {
     logout();
     navigate("/");
     setIsUserDropdownOpen(false);
+  };
+
+  const handleAdminNavigate = () => {
+    setIsUserDropdownOpen(false);
+    navigate("/admin");
   };
 
   const navLinks = [
@@ -120,9 +126,10 @@ export default function Header() {
                 <CircleUser className="w-7 h-7 md:w-8 md:h-8" />
               </button>
               {isUserDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-100">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded shadow-lg py-2 z-50 border border-gray-200">
                   {user ? (
                     <>
+                      {/* User Info */}
                       <div className="px-4 py-2 border-b border-gray-100">
                         <p className="font-medium text-gray-800 text-sm">
                           {user.username}
@@ -130,36 +137,62 @@ export default function Header() {
                         <p className="text-xs text-gray-500 truncate">
                           {user.email}
                         </p>
-                        <span
-                          className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
-                            user.role === "admin"
-                              ? "bg-[#DA4C2F] text-white"
-                              : "bg-gray-200 text-gray-700"
-                          }`}
-                        >
-                          {user.role === "admin" ? "👑 Admin" : "👤 Customer"}
-                        </span>
+                        {user.role === "admin" && (
+                          <span className="inline-block mt-1 text-[10px] font-bold text-white bg-[#DA4C2F] px-2 py-0.5 rounded-full">
+                            Admin
+                          </span>
+                        )}
                       </div>
+
+                      {/* Admin Dashboard Link - ONLY for admin users */}
+                      {user.role === "admin" && (
+                        <button
+                          onClick={handleAdminNavigate}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors border-b border-gray-100"
+                        >
+                          <LayoutDashboard className="w-4 h-4 text-[#DA4C2F]" />
+                          <span className="text-sm">Admin Dashboard</span>
+                          <span className="ml-auto text-xs text-gray-400">
+                            →
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Profile Link */}
+                      <button
+                        onClick={() => {
+                          setIsUserDropdownOpen(false);
+                          navigate("/profile");
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                        <span className="text-sm">My Profile</span>
+                      </button>
+
+                      {/* Logout */}
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600 transition-colors text-sm"
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600 transition-colors border-t border-gray-100 mt-1 pt-2"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>Logout</span>
+                        <span className="text-sm">Logout</span>
                       </button>
                     </>
                   ) : (
                     <>
                       <Link
                         to="/login?form=login"
-                        className="block px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors text-sm"
+                        className="block px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors"
+                        onClick={() => setIsUserDropdownOpen(false)}
                       >
                         <LogIn className="w-4 h-4" />
                         <span>Login</span>
                       </Link>
                       <Link
                         to="/login?form=register"
-                        className="block px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors text-sm"
+                        className="block px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors"
+                        onClick={() => setIsUserDropdownOpen(false)}
                       >
                         <UserPlus className="w-4 h-4" />
                         <span>Sign Up</span>
