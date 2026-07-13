@@ -26,14 +26,16 @@ export default function Home() {
       try {
         setLoading(true);
 
-        // Fetch featured products
+        // Fetch featured products for Bestsellers section
         const featuredResponse = await getFeaturedProducts();
+        console.log("Featured Products:", featuredResponse);
         if (featuredResponse.success) {
           setFeaturedProducts(featuredResponse.products);
         }
 
-        // Fetch special products
+        // Fetch special products for Collections section
         const specialResponse = await getSpecialProducts();
+        console.log("Special Products:", specialResponse); // Debug log
         if (specialResponse.success) {
           setSpecialProducts(specialResponse.products);
         }

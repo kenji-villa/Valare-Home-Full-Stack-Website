@@ -21,6 +21,7 @@ export default function ProductForm({
     discount: "0",
     stock: "",
     category: "",
+    subcategory: "",
     color: "",
     material: "",
     sku: "",
@@ -48,7 +49,8 @@ export default function ProductForm({
         originalPrice: product.originalPrice?.toString() || "",
         discount: product.discount?.toString() || "0",
         stock: product.stock.toString(),
-        category: product.category,
+        category: product.category || "",
+        subcategory: product.subcategory || "",
         color: product.color || "",
         material: product.material || "",
         sku: product.sku || "",
@@ -350,29 +352,42 @@ export default function ProductForm({
                     className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
                   >
                     <option value="">Select category</option>
-                    {categories
-                      .filter((c) => c !== "All")
-                      .map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
+                    <option value="Home">Home</option>
+                    <option value="Office">Office</option>
                   </select>
                 </div>
                 <div>
                   <label
                     className={`block text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"} mb-1`}
                   >
-                    Color
+                    Subcategory *
                   </label>
-                  <input
-                    type="text"
-                    name="color"
-                    value={formData.color}
+                  <select
+                    name="subcategory"
+                    value={formData.subcategory}
                     onChange={handleChange}
                     className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] ${darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300"}`}
-                    placeholder="e.g., Brown, Gray"
-                  />
+                  >
+                    <option value="">Select subcategory</option>
+                    {/* Home Subcategories */}
+                    {formData.category === "Home" && (
+                      <>
+                        <option value="Living Room">Living Room</option>
+                        <option value="Bedroom">Bedroom</option>
+                        <option value="Dining">Dining</option>
+                        <option value="Kids">Kids</option>
+                      </>
+                    )}
+                    {/* Office Subcategories */}
+                    {formData.category === "Office" && (
+                      <>
+                        <option value="Chairs">Chairs</option>
+                        <option value="Storage">Storage</option>
+                        <option value="Outdoor">Outdoor</option>
+                        <option value="Accessories">Accessories</option>
+                      </>
+                    )}
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">

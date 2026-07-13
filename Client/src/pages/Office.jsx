@@ -10,8 +10,15 @@ export default function Office() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [officeSubcategories, setOfficeSubcategories] = useState([
+    "Desks",
+    "Chairs",
+    "Storage",
+    "Conference",
+    "Accessories",
+  ]);
   const [filters, setFilters] = useState({
-    categories: ["Desks", "Chairs", "Storage", "Conference", "Accessories"],
+    categories: [],
     priceRange: { min: 0, max: 5000 },
     colors: [],
     materials: [],
@@ -30,20 +37,40 @@ export default function Office() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      // Fetch ALL products then filter by category on client side
       const response = await getProducts({ limit: 100 });
       if (response.success) {
         // Filter products to only show Office category
         const officeProducts = response.products.filter(
           (product) =>
-            product.category === "Office" || product.category === "office",
+            product.category === "Office" ||
+            product.category === "office" ||
+            product.category?.toLowerCase() === "office",
         );
         setProducts(officeProducts);
         setFilteredProducts(officeProducts);
 
-        // Extract unique categories from office products
-        const cats = [...new Set(officeProducts.map((p) => p.category))];
-        // Keep the filter categories as is
+        // Extract unique subcategories from office products
+        // Check both subCategory and category fields
+        const cats = [
+          ...new Set(
+            officeProducts
+              .map((p) => p.subCategory || p.category)
+              .filter(Boolean),
+          ),
+        ];
+
+        // If there are no subcategories, use default office subcategories
+        if (cats.length === 0) {
+          setOfficeSubcategories([
+            "Desks",
+            "Chairs",
+            "Storage",
+            "Conference",
+            "Accessories",
+          ]);
+        } else {
+          setOfficeSubcategories(cats);
+        }
       }
     } catch (error) {
       console.error("Error fetching office products:", error);
@@ -62,31 +89,37 @@ export default function Office() {
     if (filters.search) {
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.category.toLowerCase().includes(filters.search.toLowerCase()),
+          p.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          p.category?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          p.subCategory?.toLowerCase().includes(filters.search.toLowerCase()),
       );
     }
 
-    if (filters.categories.length > 0) {
-      filtered = filtered.filter((p) =>
-        filters.categories.includes(p.category),
-      );
+    // Category filter - use subCategory or category
+    if (filters.categories && filters.categories.length > 0) {
+      filtered = filtered.filter((p) => {
+        const productCategory = p.subCategory || p.category;
+        return filters.categories.includes(productCategory);
+      });
     }
 
     filtered = filtered.filter((p) => {
       const price = p.price || 0;
-      return price >= filters.priceRange.min && price <= filters.priceRange.max;
+      return (
+        price >= (filters.priceRange?.min || 0) &&
+        price <= (filters.priceRange?.max || 5000)
+      );
     });
 
-    if (filters.colors.length > 0) {
+    if (filters.colors && filters.colors.length > 0) {
       filtered = filtered.filter((p) => filters.colors.includes(p.color));
     }
 
-    if (filters.materials.length > 0) {
+    if (filters.materials && filters.materials.length > 0) {
       filtered = filtered.filter((p) => filters.materials.includes(p.material));
     }
 
-    if (filters.ratings.length > 0) {
+    if (filters.ratings && filters.ratings.length > 0) {
       filtered = filtered.filter((p) => {
         const minRating = Math.min(...filters.ratings);
         return (p.averageRating || 0) >= minRating;
@@ -113,14 +146,24 @@ export default function Office() {
     setCurrentPage(1);
   };
 
-  const categories = [
-    "All",
-    "Desks",
-    "Chairs",
-    "Storage",
-    "Conference",
-    "Accessories",
-  ];
+  const handleCategoryToggle = (category) => {
+    setFilters((prev) => {
+      // Ensure categories array exists
+      const currentCategories = prev.categories || [];
+
+      // If "All" is clicked, clear all categories
+      if (category === "All") {
+        return { ...prev, categories: [] };
+      }
+
+      const categories = currentCategories.includes(category)
+        ? currentCategories.filter((c) => c !== category)
+        : [...currentCategories, category];
+      return { ...prev, categories };
+    });
+  };
+
+  const [categories, setCategories] = useState(["All"]);
   const colors = ["Black", "White", "Brown", "Silver", "Gray", "Blue"];
   const materials = ["Wood", "Metal", "Fabric", "Leather", "Plastic"];
   const ratings = [5, 4, 3, 2];
@@ -208,34 +251,38 @@ export default function Office() {
                   <div className="mb-6">
                     <h4 className="font-semibold mb-3">Categories</h4>
                     <div className="space-y-2">
-                      {categories
-                        .filter((c) => c !== "All")
-                        .map((cat) => (
-                          <label
-                            key={cat}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={filters.categories.includes(cat)}
-                              onChange={() => {
-                                setFilters((prev) => {
-                                  const categories = prev.categories.includes(
-                                    cat,
-                                  )
-                                    ? prev.categories.filter((c) => c !== cat)
-                                    : [...prev.categories, cat];
-                                  return { ...prev, categories };
-                                });
-                              }}
-                              className="w-4 h-4 accent-[#DA4C2F]"
-                            />
-                            <span className="text-sm text-gray-700">{cat}</span>
-                          </label>
-                        ))}
+                      {(officeSubcategories.length > 0
+                        ? officeSubcategories
+                        : [
+                            "Desks",
+                            "Chairs",
+                            "Storage",
+                            "Conference",
+                            "Accessories",
+                          ]
+                      ).map((cat) => (
+                        <label
+                          key={cat}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={filters.categories.includes(cat)}
+                            onChange={() => {
+                              setFilters((prev) => {
+                                const categories = prev.categories.includes(cat)
+                                  ? prev.categories.filter((c) => c !== cat)
+                                  : [...prev.categories, cat];
+                                return { ...prev, categories };
+                              });
+                            }}
+                            className="w-4 h-4 accent-[#DA4C2F]"
+                          />
+                          <span className="text-sm text-gray-700">{cat}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
-
                   {/* Price Range */}
                   <div className="mb-6">
                     <h4 className="font-semibold mb-3">Price Range</h4>

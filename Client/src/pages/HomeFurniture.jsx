@@ -17,7 +17,7 @@ export default function HomeFurniture() {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    categories: ["Living Room", "Bedroom", "Dining", "Outdoor"],
+    categories: [],
     priceRange: { min: 0, max: 10000 },
     colors: [],
     materials: [],
@@ -42,22 +42,62 @@ export default function HomeFurniture() {
       setLoading(true);
       const response = await getProducts({ limit: 100 });
       if (response.success) {
-        setProducts(response.products);
-        setTotalProducts(
-          response.pagination?.total || response.products.length,
-        );
+        // Filter products to only show Home category products
+        // Exclude Office, Accessories, and other non-home categories
+        const homeProducts = response.products.filter((product) => {
+          const category = product.category?.toLowerCase() || "";
+          // Include only home-related categories
+          const homeCategories = [
+            "living room",
+            "bedroom",
+            "dining",
+            "chairs",
+            "storage",
+            "outdoor",
+            "home",
+          ];
+          return (
+            homeCategories.includes(category) ||
+            (product.subCategory &&
+              homeCategories.includes(product.subCategory?.toLowerCase()))
+          );
+        });
 
-        // Extract unique categories, colors, materials
-        const cats = [...new Set(response.products.map((p) => p.category))];
-        setCategories(cats);
+        setProducts(homeProducts);
+        setFilteredProducts(homeProducts);
+        setTotalProducts(homeProducts.length);
+
+        // Extract unique subcategories from home products
+        // Use subCategory if available, otherwise use category
+        const cats = [
+          ...new Set(
+            homeProducts
+              .map((p) => p.subCategory || p.category)
+              .filter(Boolean),
+          ),
+        ];
+
+        // If no products, use default home subcategories
+        if (cats.length === 0) {
+          setCategories([
+            "Living Room",
+            "Bedroom",
+            "Dining",
+            "Chairs",
+            "Storage",
+            "Outdoor",
+          ]);
+        } else {
+          setCategories(cats);
+        }
 
         const colors = [
-          ...new Set(response.products.map((p) => p.color).filter(Boolean)),
+          ...new Set(homeProducts.map((p) => p.color).filter(Boolean)),
         ];
         setAvailableColors(colors);
 
         const materials = [
-          ...new Set(response.products.map((p) => p.material).filter(Boolean)),
+          ...new Set(homeProducts.map((p) => p.material).filter(Boolean)),
         ];
         setAvailableMaterials(materials);
       }
@@ -68,10 +108,6 @@ export default function HomeFurniture() {
     }
   };
 
-  useEffect(() => {
-    applyFilters();
-  }, [filters, sortBy, products]);
-
   const applyFilters = () => {
     let filtered = [...products];
 
@@ -79,39 +115,41 @@ export default function HomeFurniture() {
     if (filters.search) {
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.category.toLowerCase().includes(filters.search.toLowerCase()),
+          p.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          p.category?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          p.subCategory?.toLowerCase().includes(filters.search.toLowerCase()),
       );
     }
 
-    // Category filter
-    if (filters.categories.length > 0) {
-      filtered = filtered.filter((p) =>
-        filters.categories.includes(p.category),
-      );
+    // Category filter - use subCategory or category
+    if (filters.categories && filters.categories.length > 0) {
+      filtered = filtered.filter((p) => {
+        const productCategory = p.subCategory || p.category;
+        return filters.categories.includes(productCategory);
+      });
     }
 
     // Price filter
     filtered = filtered.filter((p) => {
       const price = p.price || 0;
       return (
-        price >= (filters.priceRange.min || 0) &&
-        price <= (filters.priceRange.max || 10000)
+        price >= (filters.priceRange?.min || 0) &&
+        price <= (filters.priceRange?.max || 10000)
       );
     });
 
     // Color filter
-    if (filters.colors.length > 0) {
+    if (filters.colors && filters.colors.length > 0) {
       filtered = filtered.filter((p) => filters.colors.includes(p.color));
     }
 
     // Material filter
-    if (filters.materials.length > 0) {
+    if (filters.materials && filters.materials.length > 0) {
       filtered = filtered.filter((p) => filters.materials.includes(p.material));
     }
 
     // Rating filter
-    if (filters.ratings.length > 0) {
+    if (filters.ratings && filters.ratings.length > 0) {
       filtered = filtered.filter((p) => {
         const minRating = Math.min(...filters.ratings);
         return (p.averageRating || 0) >= minRating;
@@ -147,9 +185,10 @@ export default function HomeFurniture() {
 
   const handleCategoryToggle = (category) => {
     setFilters((prev) => {
-      const categories = prev.categories.includes(category)
-        ? prev.categories.filter((c) => c !== category)
-        : [...prev.categories, category];
+      const currentCategories = prev.categories || [];
+      const categories = currentCategories.includes(category)
+        ? currentCategories.filter((c) => c !== category)
+        : [...currentCategories, category];
       return { ...prev, categories };
     });
   };

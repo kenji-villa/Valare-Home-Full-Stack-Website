@@ -38,7 +38,20 @@ const ProductSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['Living Room', 'Bedroom', 'Dining', 'Chairs', 'Storage', 'Office', 'Outdoor', 'Accessories']
+    enum: ['Home', 'Office']
+  },
+  subcategory: {
+    type: String,
+    required: [true, 'Subcategory is required'],
+    enum: {
+      values: [
+        // Home subcategories
+        'Living Room', 'Bedroom', 'Dining', 'Kids',
+        // Office subcategories
+        'Chairs', 'Storage', 'Outdoor', 'Accessories'
+      ],
+      message: 'Invalid subcategory'
+    }
   },
   color: {
     type: String,
