@@ -1,68 +1,46 @@
+import { useState, useEffect } from "react";
 import ProductCard from "../common/ProductCard";
+import { getSpecialProducts } from "../../services/productService";
 
-const officeProducts = [
-  {
-    id: 7,
-    name: "Modern Office Desk",
-    price: "ETB 85,000",
-    originalPrice: "ETB 105,000",
-    image: "/assets/images/Office1.jpg",
-    rating: 4.0,
-    reviews: 4733,
-    discount: "-20%",
-  },
-  {
-    id: 8,
-    name: "Classic Office Desk",
-    price: "ETB 90,000",
-    originalPrice: "ETB 115,000",
-    image: "/assets/images/Office2.jpg",
-    rating: 3.5,
-    reviews: 2753,
-  },
-  {
-    id: 9,
-    name: "File Cabinet",
-    price: "ETB 17,500",
-    originalPrice: "ETB 25,000",
-    image: "/assets/images/File Cabinet.jpg",
-    rating: 4.3,
-    reviews: 1810,
-  },
-  {
-    id: 10,
-    name: "Comfortable Chair",
-    price: "ETB 14,000",
-    originalPrice: "ETB 16,000",
-    image: "/assets/images/Chair.jpg",
-    rating: 4.3,
-    reviews: 2052,
-    discount: "-20%",
-  },
-  {
-    id: 11,
-    name: "Modern Shelves",
-    price: "ETB 10,350",
-    originalPrice: "ETB 11,500",
-    image: "/assets/images/Shelves.jpg",
-    rating: 5.0,
-    reviews: 2540,
-    discount: "-10%",
-  },
-  {
-    id: 12,
-    name: "Office Desk",
-    price: "ETB 75,00",
-    originalPrice: "ETB 85,000",
-    image: "/assets/images/Office5.jpg",
-    rating: 4.3,
-    reviews: 3450,
-  },
-];
+export default function Collections({
+  products: propProducts,
+  loading: propLoading,
+  error: propError,
+}) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-export default function Collections() {
+  useEffect(() => {
+    // If products are passed as props, use them
+    if (propProducts) {
+      setProducts(propProducts);
+      setLoading(propLoading || false);
+      setError(propError || null);
+      return;
+    }
+
+    // Otherwise fetch special products
+    const fetchSpecialProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await getSpecialProducts();
+        if (response.success) {
+          setProducts(response.products);
+        }
+      } catch (err) {
+        console.error("Error fetching special products:", err);
+        setError("Failed to load special products");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSpecialProducts();
+  }, [propProducts, propLoading, propError]);
+
   return (
-    <section className="py-12 md:py-16 bg-[#f8f8f8]" id="shop">
+    <section className="py-12 md:py-16" id="shop">
       <div className="container">
         <div className="flex justify-between items-center mb-8">
           <h2 className="section-title">Our Collections</h2>
@@ -71,13 +49,28 @@ export default function Collections() {
             <i className="bx bx-right-arrow-alt text-xl"></i>
           </a>
         </div>
-        <div className="has-scrollbar">
-          {officeProducts.map((product) => (
-            <div key={product.id} className="scrollbar-item">
-              <ProductCard {...product} />
-            </div>
-          ))}
-        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-12 h-12 border-4 border-[#DA4C2F] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>Unable to load products. Please try again later.</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No special products available at the moment.</p>
+          </div>
+        ) : (
+          <div className="has-scrollbar">
+            {products.map((product) => (
+              <div key={product._id || product.id} className="scrollbar-item">
+                <ProductCard {...product} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

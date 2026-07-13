@@ -3,6 +3,7 @@ import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import ProductCard from "../components/common/ProductCard";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { getProducts } from "../services/productService";
 
 export default function Office() {
   const [products, setProducts] = useState([]);
@@ -21,171 +22,39 @@ export default function Office() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
 
-  // Mock product data for office
+  // Fetch office products
   useEffect(() => {
-    const mockProducts = [
-      {
-        id: 1,
-        name: "Executive Desk",
-        price: "ETB 85,000",
-        originalPrice: "ETB 105,000",
-        image: "/assets/images/Office1.jpg",
-        rating: 4.0,
-        reviews: 4733,
-        discount: "-20%",
-        category: "Desks",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 2,
-        name: "Classic Office Desk",
-        price: "ETB 90,000",
-        originalPrice: "ETB 115,000",
-        image: "/assets/images/Office2.jpg",
-        rating: 3.5,
-        reviews: 2753,
-        category: "Desks",
-        color: "Brown",
-        material: "Wood",
-      },
-      {
-        id: 3,
-        name: "File Cabinet",
-        price: "ETB 17,500",
-        originalPrice: "ETB 25,000",
-        image: "/assets/images/File Cabinet.jpg",
-        rating: 4.3,
-        reviews: 1810,
-        category: "Storage",
-        color: "Silver",
-        material: "Metal",
-      },
-      {
-        id: 4,
-        name: "Ergonomic Chair",
-        price: "ETB 14,000",
-        originalPrice: "ETB 16,000",
-        image: "/assets/images/Chair.jpg",
-        rating: 4.3,
-        reviews: 2052,
-        discount: "-20%",
-        category: "Chairs",
-        color: "Gray",
-        material: "Fabric",
-      },
-      {
-        id: 5,
-        name: "Modern Shelves",
-        price: "ETB 10,350",
-        originalPrice: "ETB 11,500",
-        image: "/assets/images/Shelves.jpg",
-        rating: 5.0,
-        reviews: 2540,
-        discount: "-10%",
-        category: "Storage",
-        color: "Silver",
-        material: "Metal",
-      },
-      {
-        id: 6,
-        name: "Office Desk",
-        price: "ETB 75,000",
-        originalPrice: "ETB 85,000",
-        image: "/assets/images/Office5.jpg",
-        rating: 4.3,
-        reviews: 3450,
-        category: "Desks",
-        color: "Gray",
-        material: "Metal",
-      },
-      {
-        id: 7,
-        name: "Conference Table",
-        price: "ETB 120,000",
-        originalPrice: "ETB 150,000",
-        image: "/assets/images/Office4.jpg",
-        rating: 4.6,
-        reviews: 890,
-        discount: "-10%",
-        category: "Conference",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 8,
-        name: "Office Chair",
-        price: "ETB 22,000",
-        originalPrice: "ETB 28,000",
-        image: "/assets/images/Chair.jpg",
-        rating: 4.1,
-        reviews: 1200,
-        category: "Chairs",
-        color: "Black",
-        material: "Leather",
-      },
-      {
-        id: 9,
-        name: "Bookcase",
-        price: "ETB 18,500",
-        originalPrice: "ETB 24,000",
-        image: "/assets/images/Shelves.jpg",
-        rating: 4.4,
-        reviews: 560,
-        category: "Storage",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 10,
-        name: "Laptop Stand",
-        price: "ETB 5,500",
-        originalPrice: "ETB 7,500",
-        image: "/assets/images/Office1.jpg",
-        rating: 4.8,
-        reviews: 340,
-        discount: "-15%",
-        category: "Accessories",
-        color: "Silver",
-        material: "Metal",
-      },
-      {
-        id: 11,
-        name: "Meeting Table",
-        price: "ETB 95,000",
-        originalPrice: "ETB 115,000",
-        image: "/assets/images/Office5.jpg",
-        rating: 4.2,
-        reviews: 430,
-        category: "Conference",
-        color: "Brown",
-        material: "Wood",
-      },
-      {
-        id: 12,
-        name: "Desk Organizer",
-        price: "ETB 3,500",
-        originalPrice: "ETB 4,500",
-        image: "/assets/images/File Cabinet.jpg",
-        rating: 4.7,
-        reviews: 210,
-        discount: "-10%",
-        category: "Accessories",
-        color: "Black",
-        material: "Plastic",
-      },
-    ];
-
-    setTimeout(() => {
-      setProducts(mockProducts);
-      setFilteredProducts(mockProducts);
-      setLoading(false);
-    }, 500);
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      // Fetch ALL products then filter by category on client side
+      const response = await getProducts({ limit: 100 });
+      if (response.success) {
+        // Filter products to only show Office category
+        const officeProducts = response.products.filter(
+          (product) =>
+            product.category === "Office" || product.category === "office",
+        );
+        setProducts(officeProducts);
+        setFilteredProducts(officeProducts);
+
+        // Extract unique categories from office products
+        const cats = [...new Set(officeProducts.map((p) => p.category))];
+        // Keep the filter categories as is
+      }
+    } catch (error) {
+      console.error("Error fetching office products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     applyFilters();
-  }, [filters, sortBy]);
+  }, [filters, sortBy, products]);
 
   const applyFilters = () => {
     let filtered = [...products];
@@ -205,7 +74,7 @@ export default function Office() {
     }
 
     filtered = filtered.filter((p) => {
-      const price = parseFloat(p.price.replace(/[^0-9.]/g, ""));
+      const price = p.price || 0;
       return price >= filters.priceRange.min && price <= filters.priceRange.max;
     });
 
@@ -220,27 +89,21 @@ export default function Office() {
     if (filters.ratings.length > 0) {
       filtered = filtered.filter((p) => {
         const minRating = Math.min(...filters.ratings);
-        return p.rating >= minRating;
+        return (p.averageRating || 0) >= minRating;
       });
     }
 
     switch (sortBy) {
       case "price_low":
-        filtered.sort(
-          (a, b) =>
-            parseFloat(a.price.replace(/[^0-9.]/g, "")) -
-            parseFloat(b.price.replace(/[^0-9.]/g, "")),
-        );
+        filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
         break;
       case "price_high":
-        filtered.sort(
-          (a, b) =>
-            parseFloat(b.price.replace(/[^0-9.]/g, "")) -
-            parseFloat(a.price.replace(/[^0-9.]/g, "")),
-        );
+        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "rating":
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort(
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
+        );
         break;
       default:
         break;
@@ -251,6 +114,7 @@ export default function Office() {
   };
 
   const categories = [
+    "All",
     "Desks",
     "Chairs",
     "Storage",
@@ -278,7 +142,7 @@ export default function Office() {
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: "url('/assets/images/Officebanner.png')",
+              backgroundImage: "url('/assets/images/Office4.jpg')",
               backgroundPosition: "center 40%",
             }}
           >
@@ -305,7 +169,7 @@ export default function Office() {
                         search: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-transparent border border-white text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
+                    className="w-full px-4 py-3 pr-12 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] border border-gray-300"
                   />
                   <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 </div>
@@ -344,27 +208,31 @@ export default function Office() {
                   <div className="mb-6">
                     <h4 className="font-semibold mb-3">Categories</h4>
                     <div className="space-y-2">
-                      {categories.map((cat) => (
-                        <label
-                          key={cat}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={filters.categories.includes(cat)}
-                            onChange={() => {
-                              setFilters((prev) => {
-                                const categories = prev.categories.includes(cat)
-                                  ? prev.categories.filter((c) => c !== cat)
-                                  : [...prev.categories, cat];
-                                return { ...prev, categories };
-                              });
-                            }}
-                            className="w-4 h-4 accent-[#DA4C2F]"
-                          />
-                          <span className="text-sm text-gray-700">{cat}</span>
-                        </label>
-                      ))}
+                      {categories
+                        .filter((c) => c !== "All")
+                        .map((cat) => (
+                          <label
+                            key={cat}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={filters.categories.includes(cat)}
+                              onChange={() => {
+                                setFilters((prev) => {
+                                  const categories = prev.categories.includes(
+                                    cat,
+                                  )
+                                    ? prev.categories.filter((c) => c !== cat)
+                                    : [...prev.categories, cat];
+                                  return { ...prev, categories };
+                                });
+                              }}
+                              className="w-4 h-4 accent-[#DA4C2F]"
+                            />
+                            <span className="text-sm text-gray-700">{cat}</span>
+                          </label>
+                        ))}
                     </div>
                   </div>
 
@@ -516,13 +384,7 @@ export default function Office() {
                     <button
                       onClick={() => {
                         setFilters({
-                          categories: [
-                            "Desks",
-                            "Chairs",
-                            "Storage",
-                            "Conference",
-                            "Accessories",
-                          ],
+                          categories: [],
                           priceRange: { min: 0, max: 5000 },
                           colors: [],
                           materials: [],
@@ -604,7 +466,10 @@ export default function Office() {
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {currentItems.map((product) => (
-                        <ProductCard key={product.id} {...product} />
+                        <ProductCard
+                          key={product._id || product.id}
+                          {...product}
+                        />
                       ))}
                     </div>
 
@@ -626,19 +491,30 @@ export default function Office() {
                           >
                             Previous
                           </button>
-                          {Array.from({ length: totalPages }, (_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setCurrentPage(i + 1)}
-                              className={`px-3 py-1.5 border rounded-lg text-sm transition-colors ${
-                                currentPage === i + 1
-                                  ? "bg-[#DA4C2F] text-white border-[#DA4C2F]"
-                                  : "border-gray-300 hover:bg-gray-50"
-                              }`}
-                            >
-                              {i + 1}
-                            </button>
-                          ))}
+                          {Array.from(
+                            { length: Math.min(totalPages, 5) },
+                            (_, i) => {
+                              const pageNum = i + 1;
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className={`px-3 py-1.5 border rounded-lg text-sm transition-colors ${
+                                    currentPage === pageNum
+                                      ? "bg-[#DA4C2F] text-white border-[#DA4C2F]"
+                                      : "border-gray-300 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            },
+                          )}
+                          {totalPages > 5 && (
+                            <span className="px-2 py-1.5 text-gray-500">
+                              ...
+                            </span>
+                          )}
                           <button
                             onClick={() =>
                               setCurrentPage((prev) =>

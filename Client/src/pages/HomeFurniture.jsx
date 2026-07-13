@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { getProducts } from "../services/productService";
 
 export default function HomeFurniture() {
   const [products, setProducts] = useState([]);
@@ -17,7 +18,7 @@ export default function HomeFurniture() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     categories: ["Living Room", "Bedroom", "Dining", "Outdoor"],
-    priceRange: { min: 0, max: 5000 },
+    priceRange: { min: 0, max: 10000 },
     colors: [],
     materials: [],
     ratings: [],
@@ -26,171 +27,50 @@ export default function HomeFurniture() {
   const [sortBy, setSortBy] = useState("featured");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [categories, setCategories] = useState([]);
+  const [availableColors, setAvailableColors] = useState([]);
+  const [availableMaterials, setAvailableMaterials] = useState([]);
 
-  // Mock product data - In production, this would come from an API
+  // Fetch products from API
   useEffect(() => {
-    const mockProducts = [
-      {
-        id: 1,
-        name: "Modern Sectional Sofa",
-        price: "ETB 25,000.00",
-        originalPrice: "ETB 45,000.00",
-        image: "/assets/images/p1.jpg",
-        rating: 4.5,
-        reviews: 3240,
-        discount: "-20%",
-        category: "Living Room",
-        color: "Brown",
-        material: "Fabric",
-      },
-      {
-        id: 2,
-        name: "Master Bed",
-        price: "ETB 110,000",
-        originalPrice: "ETB 150,000",
-        image: "/assets/images/p2.jpg",
-        rating: 4.8,
-        reviews: 5210,
-        category: "Bedroom",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 3,
-        name: "Luxury Couch",
-        price: "ETB 45,000",
-        originalPrice: "ETB 60,000",
-        image: "/assets/images/p3.jpg",
-        rating: 4.3,
-        reviews: 3720,
-        category: "Living Room",
-        color: "Gray",
-        material: "Fabric",
-      },
-      {
-        id: 4,
-        name: "Leather Sofa",
-        price: "ETB 60,000",
-        originalPrice: "ETB 80,000",
-        image: "/assets/images/p4.jpg",
-        rating: 4.2,
-        reviews: 1852,
-        discount: "-20%",
-        category: "Living Room",
-        color: "Black",
-        material: "Leather",
-      },
-      {
-        id: 5,
-        name: "Modern Sofa",
-        price: "ETB 85,000",
-        originalPrice: "ETB 95,000",
-        image: "/assets/images/p5.jpg",
-        rating: 4.3,
-        reviews: 2333,
-        discount: "-10%",
-        category: "Living Room",
-        color: "Silver",
-        material: "Fabric",
-      },
-      {
-        id: 6,
-        name: "Dining Table",
-        price: "ETB 25,000",
-        originalPrice: "ETB 35,000",
-        image: "/assets/images/p6.jpg",
-        rating: 4.0,
-        reviews: 1660,
-        category: "Dining",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 7,
-        name: "Minimal Closet",
-        price: "ETB 35,000",
-        originalPrice: "ETB 50,000",
-        image: "/assets/images/File Cabinet.jpg",
-        rating: 4.1,
-        reviews: 2100,
-        discount: "-15%",
-        category: "Bedroom",
-        color: "White",
-        material: "Wood",
-      },
-      {
-        id: 8,
-        name: "Outdoor Lounge Set",
-        price: "ETB 55,000",
-        originalPrice: "ETB 70,000",
-        image: "/assets/images/Kids_furniture.jpg",
-        rating: 4.4,
-        reviews: 890,
-        category: "Outdoor",
-        color: "Gray",
-        material: "Metal",
-      },
-      {
-        id: 9,
-        name: "Study Desk",
-        price: "ETB 18,000",
-        originalPrice: "ETB 25,000",
-        image: "/assets/images/Office1.jpg",
-        rating: 4.6,
-        reviews: 450,
-        category: "Bedroom",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 10,
-        name: "Dining Chairs Set",
-        price: "ETB 32,000",
-        originalPrice: "ETB 42,000",
-        image: "/assets/images/Chair.jpg",
-        rating: 4.2,
-        reviews: 1200,
-        category: "Dining",
-        color: "Brown",
-        material: "Wood",
-      },
-      {
-        id: 11,
-        name: "Bookshelf",
-        price: "ETB 15,000",
-        originalPrice: "ETB 20,000",
-        image: "/assets/images/Shelves.jpg",
-        rating: 4.7,
-        reviews: 780,
-        discount: "-10%",
-        category: "Living Room",
-        color: "Wood",
-        material: "Wood",
-      },
-      {
-        id: 12,
-        name: "Nightstand Set",
-        price: "ETB 8,500",
-        originalPrice: "ETB 12,000",
-        image: "/assets/images/Office5.jpg",
-        rating: 4.0,
-        reviews: 340,
-        category: "Bedroom",
-        color: "White",
-        material: "Wood",
-      },
-    ];
-
-    setTimeout(() => {
-      setProducts(mockProducts);
-      setFilteredProducts(mockProducts);
-      setLoading(false);
-    }, 500);
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await getProducts({ limit: 100 });
+      if (response.success) {
+        setProducts(response.products);
+        setTotalProducts(
+          response.pagination?.total || response.products.length,
+        );
+
+        // Extract unique categories, colors, materials
+        const cats = [...new Set(response.products.map((p) => p.category))];
+        setCategories(cats);
+
+        const colors = [
+          ...new Set(response.products.map((p) => p.color).filter(Boolean)),
+        ];
+        setAvailableColors(colors);
+
+        const materials = [
+          ...new Set(response.products.map((p) => p.material).filter(Boolean)),
+        ];
+        setAvailableMaterials(materials);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     applyFilters();
-  }, [filters, sortBy]);
+  }, [filters, sortBy, products]);
 
   const applyFilters = () => {
     let filtered = [...products];
@@ -213,8 +93,11 @@ export default function HomeFurniture() {
 
     // Price filter
     filtered = filtered.filter((p) => {
-      const price = parseFloat(p.price.replace(/[^0-9.]/g, ""));
-      return price >= filters.priceRange.min && price <= filters.priceRange.max;
+      const price = p.price || 0;
+      return (
+        price >= (filters.priceRange.min || 0) &&
+        price <= (filters.priceRange.max || 10000)
+      );
     });
 
     // Color filter
@@ -231,33 +114,30 @@ export default function HomeFurniture() {
     if (filters.ratings.length > 0) {
       filtered = filtered.filter((p) => {
         const minRating = Math.min(...filters.ratings);
-        return p.rating >= minRating;
+        return (p.averageRating || 0) >= minRating;
       });
     }
 
     // Sort
     switch (sortBy) {
       case "price_low":
-        filtered.sort(
-          (a, b) =>
-            parseFloat(a.price.replace(/[^0-9.]/g, "")) -
-            parseFloat(b.price.replace(/[^0-9.]/g, "")),
-        );
+        filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
         break;
       case "price_high":
-        filtered.sort(
-          (a, b) =>
-            parseFloat(b.price.replace(/[^0-9.]/g, "")) -
-            parseFloat(a.price.replace(/[^0-9.]/g, "")),
-        );
+        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case "rating":
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort(
+          (a, b) => (b.averageRating || 0) - (a.averageRating || 0),
+        );
         break;
-      case "newest":
-        filtered.sort((a, b) => b.id - a.id);
+      case "featured":
+        filtered.sort(
+          (a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0),
+        );
         break;
       default:
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         break;
     }
 
@@ -303,14 +183,14 @@ export default function HomeFurniture() {
 
   const resetFilters = () => {
     setFilters({
-      categories: ["Living Room", "Bedroom", "Dining", "Outdoor"],
-      priceRange: { min: 0, max: 5000 },
+      categories: [],
+      priceRange: { min: 0, max: 10000 },
       colors: [],
       materials: [],
       ratings: [],
       search: "",
     });
-    setSortBy("featured");
+    setSortBy("newest");
   };
 
   // Pagination
@@ -322,9 +202,6 @@ export default function HomeFurniture() {
   );
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const categories = ["Living Room", "Bedroom", "Dining", "Outdoor"];
-  const colors = ["Black", "White", "Brown", "Silver", "Wood", "Gray"];
-  const materials = ["Wood", "Metal", "Fabric", "Leather", "Plastic"];
   const ratings = [5, 4, 3, 2];
 
   return (
@@ -332,12 +209,11 @@ export default function HomeFurniture() {
       <Header />
       <main>
         {/* Hero Section */}
-        {/* Hero Section */}
         <section className="relative py-16 min-h-[400px] flex items-center">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: "url('/assets/images/Homebanner.png')",
+              backgroundImage: "url('/assets/images/Banner.jpg')",
               backgroundPosition: "center 30%",
             }}
           >
@@ -364,9 +240,9 @@ export default function HomeFurniture() {
                         search: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 pr-12 rounded-lg bg-transparent border border-white text-white placeholder-white focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
+                    className="w-full px-4 py-3 pr-12 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
                   />
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white-400 w-5 h-5" />
+                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                 </div>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -448,7 +324,7 @@ export default function HomeFurniture() {
                             ...prev,
                             priceRange: {
                               ...prev.priceRange,
-                              max: parseInt(e.target.value) || 5000,
+                              max: parseInt(e.target.value) || 10000,
                             },
                           }))
                         }
@@ -458,49 +334,53 @@ export default function HomeFurniture() {
                   </div>
 
                   {/* Colors */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold mb-3">Colors</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {colors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => handleColorToggle(color)}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${
-                            filters.colors.includes(color)
-                              ? "border-[#DA4C2F] ring-2 ring-[#DA4C2F]/30"
-                              : "border-gray-300"
-                          }`}
-                          style={{
-                            backgroundColor: color.toLowerCase(),
-                            borderColor:
-                              color === "White" ? "#d1d5db" : undefined,
-                          }}
-                          title={color}
-                        />
-                      ))}
+                  {availableColors.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-3">Colors</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {availableColors.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => handleColorToggle(color)}
+                            className={`w-8 h-8 rounded-full border-2 transition-all ${
+                              filters.colors.includes(color)
+                                ? "border-[#DA4C2F] ring-2 ring-[#DA4C2F]/30"
+                                : "border-gray-300"
+                            }`}
+                            style={{
+                              backgroundColor: color.toLowerCase(),
+                              borderColor:
+                                color === "White" ? "#d1d5db" : undefined,
+                            }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Materials */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold mb-3">Materials</h4>
-                    <div className="space-y-2">
-                      {materials.map((mat) => (
-                        <label
-                          key={mat}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={filters.materials.includes(mat)}
-                            onChange={() => handleMaterialToggle(mat)}
-                            className="w-4 h-4 accent-[#DA4C2F]"
-                          />
-                          <span className="text-sm text-gray-700">{mat}</span>
-                        </label>
-                      ))}
+                  {availableMaterials.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-3">Materials</h4>
+                      <div className="space-y-2">
+                        {availableMaterials.map((mat) => (
+                          <label
+                            key={mat}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={filters.materials.includes(mat)}
+                              onChange={() => handleMaterialToggle(mat)}
+                              className="w-4 h-4 accent-[#DA4C2F]"
+                            />
+                            <span className="text-sm text-gray-700">{mat}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Ratings */}
                   <div className="mb-6">
@@ -581,11 +461,11 @@ export default function HomeFurniture() {
                       onChange={(e) => setSortBy(e.target.value)}
                       className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
                     >
+                      <option value="newest">Newest Arrivals</option>
                       <option value="featured">Featured</option>
                       <option value="price_low">Price: Low to High</option>
                       <option value="price_high">Price: High to Low</option>
                       <option value="rating">Customer Rating</option>
-                      <option value="newest">Newest Arrivals</option>
                     </select>
                   </div>
 
@@ -620,7 +500,10 @@ export default function HomeFurniture() {
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                       {currentItems.map((product) => (
-                        <ProductCard key={product.id} {...product} />
+                        <ProductCard
+                          key={product._id || product.id}
+                          {...product}
+                        />
                       ))}
                     </div>
 
@@ -642,19 +525,30 @@ export default function HomeFurniture() {
                           >
                             Previous
                           </button>
-                          {Array.from({ length: totalPages }, (_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setCurrentPage(i + 1)}
-                              className={`px-3 py-1.5 border rounded-lg text-sm transition-colors ${
-                                currentPage === i + 1
-                                  ? "bg-[#DA4C2F] text-white border-[#DA4C2F]"
-                                  : "border-gray-300 hover:bg-gray-50"
-                              }`}
-                            >
-                              {i + 1}
-                            </button>
-                          ))}
+                          {Array.from(
+                            { length: Math.min(totalPages, 5) },
+                            (_, i) => {
+                              const pageNum = i + 1;
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className={`px-3 py-1.5 border rounded-lg text-sm transition-colors ${
+                                    currentPage === pageNum
+                                      ? "bg-[#DA4C2F] text-white border-[#DA4C2F]"
+                                      : "border-gray-300 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            },
+                          )}
+                          {totalPages > 5 && (
+                            <span className="px-2 py-1.5 text-gray-500">
+                              ...
+                            </span>
+                          )}
                           <button
                             onClick={() =>
                               setCurrentPage((prev) =>
