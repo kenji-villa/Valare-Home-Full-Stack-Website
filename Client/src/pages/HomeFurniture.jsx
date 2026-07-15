@@ -42,53 +42,43 @@ export default function HomeFurniture() {
       setLoading(true);
       const response = await getProducts({ limit: 100 });
       if (response.success) {
-        // Filter products to only show Home category products
-        // Exclude Office, Accessories, and other non-home categories
-        const homeProducts = response.products.filter((product) => {
-          const category = product.category?.toLowerCase() || "";
-          // Include only home-related categories
-          const homeCategories = [
-            "living room",
-            "bedroom",
-            "dining",
-            "chairs",
-            "storage",
-            "outdoor",
-            "home",
-          ];
-          return (
-            homeCategories.includes(category) ||
-            (product.subCategory &&
-              homeCategories.includes(product.subCategory?.toLowerCase()))
-          );
-        });
+        // Filter to ONLY show Home products (exclude Office)
+        const homeProducts = response.products.filter(
+          (product) =>
+            product.category !== "Office" &&
+            product.category !== "office" &&
+            product.category !== "Accessories" &&
+            product.category !== "Chairs" &&
+            product.subcategory !== "Office",
+        );
 
         setProducts(homeProducts);
         setFilteredProducts(homeProducts);
         setTotalProducts(homeProducts.length);
 
         // Extract unique subcategories from home products
-        // Use subCategory if available, otherwise use category
+        // Look at subCategory first, then fallback to category
         const cats = [
           ...new Set(
             homeProducts
-              .map((p) => p.subCategory || p.category)
+              .map((p) => (p.subcategory || p.category || "").trim())
               .filter(Boolean),
           ),
         ];
 
-        // If no products, use default home subcategories
-        if (cats.length === 0) {
-          setCategories([
-            "Living Room",
-            "Bedroom",
-            "Dining",
-            "Chairs",
-            "Storage",
-            "Outdoor",
-          ]);
+        // Filter out 'Home' and 'Office' from categories
+        const filteredCats = cats.filter(
+          (cat) =>
+            cat !== "Home" &&
+            cat !== "Office" &&
+            cat !== "office" &&
+            !cat.includes("Office"),
+        );
+
+        if (filteredCats.length > 0) {
+          setCategories(filteredCats);
         } else {
-          setCategories(cats);
+          setCategories(["Living Room", "Bedroom", "Dining", "Kids"]);
         }
 
         const colors = [
@@ -108,6 +98,10 @@ export default function HomeFurniture() {
     }
   };
 
+  useEffect(() => {
+    applyFilters();
+  }, [filters, sortBy, products]);
+
   const applyFilters = () => {
     let filtered = [...products];
 
@@ -115,41 +109,49 @@ export default function HomeFurniture() {
     if (filters.search) {
       filtered = filtered.filter(
         (p) =>
-          p.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.category?.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.subCategory?.toLowerCase().includes(filters.search.toLowerCase()),
+          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+          (p.subCategory || p.category)
+            .toLowerCase()
+            .includes(filters.search.toLowerCase()),
       );
     }
 
-    // Category filter - use subCategory or category
-    if (filters.categories && filters.categories.length > 0) {
+    // Category filter - NOW uses subCategory if available
+    if (filters.categories.length > 0) {
       filtered = filtered.filter((p) => {
-        const productCategory = p.subCategory || p.category;
-        return filters.categories.includes(productCategory);
+        // Use subCategory if it exists, otherwise use category
+        const productCategory = (p.subcategory || p.category || "")
+          .trim()
+          .toLowerCase();
+
+        return filters.categories.some(
+          (cat) => cat.trim().toLowerCase() === productCategory,
+        );
       });
     }
 
     // Price filter
     filtered = filtered.filter((p) => {
       const price = p.price || 0;
-      return (
-        price >= (filters.priceRange?.min || 0) &&
-        price <= (filters.priceRange?.max || 10000)
-      );
+      const min = filters.priceRange.min === "" ? 0 : filters.priceRange.min;
+      const max =
+        filters.priceRange.max === "" ? Infinity : filters.priceRange.max;
+
+      return price >= min && price <= max;
     });
 
     // Color filter
-    if (filters.colors && filters.colors.length > 0) {
+    if (filters.colors.length > 0) {
       filtered = filtered.filter((p) => filters.colors.includes(p.color));
     }
 
     // Material filter
-    if (filters.materials && filters.materials.length > 0) {
+    if (filters.materials.length > 0) {
       filtered = filtered.filter((p) => filters.materials.includes(p.material));
     }
 
     // Rating filter
-    if (filters.ratings && filters.ratings.length > 0) {
+    if (filters.ratings.length > 0) {
       filtered = filtered.filter((p) => {
         const minRating = Math.min(...filters.ratings);
         return (p.averageRating || 0) >= minRating;
@@ -185,10 +187,9 @@ export default function HomeFurniture() {
 
   const handleCategoryToggle = (category) => {
     setFilters((prev) => {
-      const currentCategories = prev.categories || [];
-      const categories = currentCategories.includes(category)
-        ? currentCategories.filter((c) => c !== category)
-        : [...currentCategories, category];
+      const categories = prev.categories.includes(category)
+        ? prev.categories.filter((c) => c !== category)
+        : [...prev.categories, category];
       return { ...prev, categories };
     });
   };
@@ -279,9 +280,12 @@ export default function HomeFurniture() {
                         search: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 pr-12 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
+                    className="w-full px-4 py-3 pr-12 rounded-lg
+               bg-white/10 border border-white/50
+               text-white placeholder:text-white/70
+               focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
                   />
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white w-5 h-5" />
                 </div>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -348,7 +352,10 @@ export default function HomeFurniture() {
                             ...prev,
                             priceRange: {
                               ...prev.priceRange,
-                              min: parseInt(e.target.value) || 0,
+                              min:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
                             },
                           }))
                         }
@@ -363,7 +370,10 @@ export default function HomeFurniture() {
                             ...prev,
                             priceRange: {
                               ...prev.priceRange,
-                              max: parseInt(e.target.value) || 10000,
+                              max:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
                             },
                           }))
                         }

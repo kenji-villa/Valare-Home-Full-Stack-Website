@@ -16,6 +16,7 @@ export default function ProductCard({
   reviews,
   discount,
   category,
+  subcategory,
   isSpecial,
   averageRating,
   reviewCount,
@@ -218,7 +219,12 @@ export default function ProductCard({
             {productReviews} reviews
           </span>
         </div>
-        {category && (
+        {subcategory && (
+          <span className="text-xs text-gray-400 mt-1 block">
+            {subcategory}
+          </span>
+        )}
+        {!subcategory && category && (
           <span className="text-xs text-gray-400 mt-1 block">{category}</span>
         )}
       </div>

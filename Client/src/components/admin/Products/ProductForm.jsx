@@ -113,38 +113,57 @@ export default function ProductForm({
       return;
     }
 
+    // Show previews immediately
+    const previews = validFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prev) => [...prev, ...previews]);
     setImageFiles(newFiles);
-    const previews = newFiles.map((file) => URL.createObjectURL(file));
-    setImagePreviews(previews);
 
     // Upload images to server
     try {
       setUploading(true);
-      const response = await uploadProductImages(validFiles);
-      if (response.success) {
-        const uploadedPaths = response.images.map((img) => img.path);
+      const formData = new FormData();
+      validFiles.forEach((file) => {
+        formData.append("images", file);
+      });
+
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        "http://localhost:3001/api/products/upload",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Upload failed");
+      }
+
+      if (data.success) {
+        const uploadedPaths = data.images.map((img) => img.path);
         setFormData((prev) => ({
           ...prev,
           images: [...prev.images, ...uploadedPaths],
         }));
+        console.log("Images uploaded successfully:", uploadedPaths);
       }
     } catch (error) {
       console.error("Upload error:", error);
       alert("Failed to upload images. Please try again.");
+      // Remove previews if upload failed
+      setImagePreviews((prev) => prev.slice(0, -validFiles.length));
+      setImageFiles((prev) => prev.slice(0, -validFiles.length));
     } finally {
       setUploading(false);
     }
   };
 
-  const removeImage = (index) => {
-    const newFiles = imageFiles.filter((_, i) => i !== index);
-    const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    const newPaths = formData.images.filter((_, i) => i !== index);
-    setImageFiles(newFiles);
-    setImagePreviews(newPreviews);
-    setFormData((prev) => ({ ...prev, images: newPaths }));
-  };
-
+  // Replace the handleSubmit function:
   const handleSubmit = async () => {
     // Validate required fields
     if (
@@ -154,6 +173,12 @@ export default function ProductForm({
       !formData.stock
     ) {
       alert("Please fill in all required fields.");
+      return;
+    }
+
+    // Validate subcategory is selected
+    if (!formData.subcategory) {
+      alert("Please select a subcategory.");
       return;
     }
 
@@ -174,6 +199,7 @@ export default function ProductForm({
       discount: formData.discount ? parseInt(formData.discount) : 0,
       stock: parseInt(formData.stock),
       category: formData.category,
+      subcategory: formData.subcategory,
       color: formData.color || "",
       material: formData.material || "",
       sku: formData.sku || undefined,
@@ -190,29 +216,60 @@ export default function ProductForm({
     };
 
     try {
+      setUploading(true);
       let savedProduct;
 
       if (product) {
         // Update existing product
-        const response = await updateProduct(product._id, productData);
-        if (response.success) {
-          savedProduct = response.product;
-          onSave(savedProduct);
-        }
+        const response = await fetch(
+          `http://localhost:3001/api/products/${product._id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+            body: JSON.stringify(productData),
+          },
+        );
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Update failed");
+        savedProduct = data.product;
+        onSave(savedProduct);
       } else {
         // Create new product
-        const response = await createProduct(productData);
-        if (response.success) {
-          savedProduct = response.product;
-          onSave(savedProduct);
-        }
+        const response = await fetch("http://localhost:3001/api/products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: JSON.stringify(productData),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Create failed");
+        savedProduct = data.product;
+        onSave(savedProduct);
       }
     } catch (error) {
       console.error("Error saving product:", error);
       alert(
         `Failed to ${product ? "update" : "create"} product: ${error.message}`,
       );
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const removeImage = (index) => {
+    const newFiles = imageFiles.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    const newPaths = formData.images.filter((_, i) => i !== index);
+    setImageFiles(newFiles);
+    setImagePreviews(newPreviews);
+    setFormData((prev) => ({ ...prev, images: newPaths }));
   };
 
   return (

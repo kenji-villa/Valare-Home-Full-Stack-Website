@@ -39,37 +39,46 @@ export default function Office() {
       setLoading(true);
       const response = await getProducts({ limit: 100 });
       if (response.success) {
-        // Filter products to only show Office category
+        // Filter products to only show Office category and its subcategories
         const officeProducts = response.products.filter(
           (product) =>
             product.category === "Office" ||
             product.category === "office" ||
-            product.category?.toLowerCase() === "office",
+            product.subcategory === "Chairs" ||
+            product.subcategory === "Storage" ||
+            product.subcategory === "Outdoor" ||
+            product.subcategory === "Accessories" ||
+            product.subcategory === "Conference" ||
+            product.subcategory === "Desks",
         );
         setProducts(officeProducts);
         setFilteredProducts(officeProducts);
 
         // Extract unique subcategories from office products
-        // Check both subCategory and category fields
+        // Look at subCategory first, then fallback to category
         const cats = [
           ...new Set(
             officeProducts
-              .map((p) => p.subCategory || p.category)
+              .map((p) => (p.subcategory || p.category || "").trim())
               .filter(Boolean),
           ),
         ];
 
-        // If there are no subcategories, use default office subcategories
-        if (cats.length === 0) {
+        // Filter out 'Office' from categories
+        const filteredCats = cats.filter(
+          (cat) =>
+            cat !== "Office" && cat !== "office" && !cat.includes("Office"),
+        );
+
+        if (filteredCats.length > 0) {
+          setOfficeSubcategories(filteredCats);
+        } else {
           setOfficeSubcategories([
-            "Desks",
             "Chairs",
             "Storage",
-            "Conference",
+            "Outdoor",
             "Accessories",
           ]);
-        } else {
-          setOfficeSubcategories(cats);
         }
       }
     } catch (error) {
@@ -89,37 +98,45 @@ export default function Office() {
     if (filters.search) {
       filtered = filtered.filter(
         (p) =>
-          p.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.category?.toLowerCase().includes(filters.search.toLowerCase()) ||
-          p.subCategory?.toLowerCase().includes(filters.search.toLowerCase()),
+          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+          (p.subCategory || p.category)
+            .toLowerCase()
+            .includes(filters.search.toLowerCase()),
       );
     }
 
-    // Category filter - use subCategory or category
+    // Category filter - NOW uses subCategory if available
     if (filters.categories && filters.categories.length > 0) {
       filtered = filtered.filter((p) => {
-        const productCategory = p.subCategory || p.category;
-        return filters.categories.includes(productCategory);
+        // Use subCategory if it exists, otherwise use category
+        const productCategory = (p.subcategory || p.category || "")
+          .trim()
+          .toLowerCase();
+
+        return filters.categories.some(
+          (cat) => cat.trim().toLowerCase() === productCategory,
+        );
       });
     }
 
     filtered = filtered.filter((p) => {
       const price = p.price || 0;
-      return (
-        price >= (filters.priceRange?.min || 0) &&
-        price <= (filters.priceRange?.max || 5000)
-      );
+      const min = filters.priceRange.min === "" ? 0 : filters.priceRange.min;
+      const max =
+        filters.priceRange.max === "" ? Infinity : filters.priceRange.max;
+
+      return price >= min && price <= max;
     });
 
-    if (filters.colors && filters.colors.length > 0) {
+    if (filters.colors.length > 0) {
       filtered = filtered.filter((p) => filters.colors.includes(p.color));
     }
 
-    if (filters.materials && filters.materials.length > 0) {
+    if (filters.materials.length > 0) {
       filtered = filtered.filter((p) => filters.materials.includes(p.material));
     }
 
-    if (filters.ratings && filters.ratings.length > 0) {
+    if (filters.ratings.length > 0) {
       filtered = filtered.filter((p) => {
         const minRating = Math.min(...filters.ratings);
         return (p.averageRating || 0) >= minRating;
@@ -212,9 +229,12 @@ export default function Office() {
                         search: e.target.value,
                       }))
                     }
-                    className="w-full px-4 py-3 pr-12 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] border border-gray-300"
+                    className="w-full px-4 py-3 pr-12 rounded-lg
+               bg-white/10 border border-white/50
+               text-white placeholder:text-white/70
+               focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
                   />
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white w-5 h-5" />
                 </div>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -253,13 +273,7 @@ export default function Office() {
                     <div className="space-y-2">
                       {(officeSubcategories.length > 0
                         ? officeSubcategories
-                        : [
-                            "Desks",
-                            "Chairs",
-                            "Storage",
-                            "Conference",
-                            "Accessories",
-                          ]
+                        : ["Chairs", "Storage", "Outdoor", "Accessories"]
                       ).map((cat) => (
                         <label
                           key={cat}
@@ -267,12 +281,14 @@ export default function Office() {
                         >
                           <input
                             type="checkbox"
-                            checked={filters.categories.includes(cat)}
+                            checked={filters.categories?.includes(cat) || false}
                             onChange={() => {
                               setFilters((prev) => {
-                                const categories = prev.categories.includes(cat)
+                                const categories = prev.categories?.includes(
+                                  cat,
+                                )
                                   ? prev.categories.filter((c) => c !== cat)
-                                  : [...prev.categories, cat];
+                                  : [...(prev.categories || []), cat];
                                 return { ...prev, categories };
                               });
                             }}
@@ -296,7 +312,10 @@ export default function Office() {
                             ...prev,
                             priceRange: {
                               ...prev.priceRange,
-                              min: parseInt(e.target.value) || 0,
+                              min:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
                             },
                           }))
                         }
@@ -311,7 +330,10 @@ export default function Office() {
                             ...prev,
                             priceRange: {
                               ...prev.priceRange,
-                              max: parseInt(e.target.value) || 5000,
+                              max:
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
                             },
                           }))
                         }

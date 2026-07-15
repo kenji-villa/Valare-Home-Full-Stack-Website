@@ -20,11 +20,11 @@ const fetchWithAuth = async (url, options = {}) => {
 
     // Try to parse JSON response
     let data;
-    const text = await response.text();
     try {
-      data = JSON.parse(text);
+      data = await response.json();
     } catch (e) {
       // If response is not JSON, create error object
+      const text = await response.text();
       data = { success: false, message: text || 'Server error' };
     }
     
@@ -83,10 +83,26 @@ export const getRelatedProducts = async (id) => {
 
 // Create product (Admin only)
 export const createProduct = async (productData) => {
-  return fetchWithAuth(API_ENDPOINTS.PRODUCTS.ALL, {
-    method: 'POST',
-    body: JSON.stringify(productData),
-  });
+  try {
+    const token = getAuthToken();
+    const response = await fetch(API_ENDPOINTS.PRODUCTS.ALL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(productData),
+    });
+    
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to create product');
+    }
+    return data;
+  } catch (error) {
+    console.error('Create product error:', error);
+    throw error;
+  }
 };
 
 // Update product (Admin only)
@@ -130,7 +146,12 @@ export const addProductRating = async (id, ratingData) => {
 
 // Upload product images
 export const uploadProductImages = async (files) => {
-  const token = getAuthToken();
+  const token = localStorage.getItem('authToken');
+  
+  if (!token) {
+    throw new Error('Authentication required. Please login again.');
+  }
+  
   const formData = new FormData();
   
   files.forEach(file => {

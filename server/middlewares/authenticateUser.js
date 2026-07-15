@@ -11,6 +11,7 @@ const authenticateUser = async (req, res, next) => {
     }
 
     if (!token) {
+      console.log('No token provided');
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please login first.'
@@ -18,12 +19,22 @@ const authenticateUser = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      console.log('Token verification failed:', error.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token. Please login again.'
+      });
+    }
 
     // Find user
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
+      console.log('User not found for ID:', decoded.id);
       return res.status(401).json({
         success: false,
         message: 'User not found. Invalid token.'
@@ -38,29 +49,10 @@ const authenticateUser = async (req, res, next) => {
       });
     }
 
-    // Check if password was changed after token was issued
-    if (user.changedPasswordAfter(decoded.iat)) {
-      return res.status(401).json({
-        success: false,
-        message: 'Password was changed recently. Please login again.'
-      });
-    }
-
     req.user = user;
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token. Please login again.'
-      });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired. Please login again.'
-      });
-    }
+    console.error('Auth middleware error:', error);
     return res.status(500).json({
       success: false,
       message: 'Authentication error',

@@ -145,6 +145,15 @@ const createProduct = async (req, res) => {
     }
     
     const productData = req.body;
+    console.log('Creating product with data:', productData);
+    
+    // Validate images array
+    if (!productData.images || productData.images.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one image is required'
+      });
+    }
     
     // Ensure images is an array of strings
     if (typeof productData.images === 'string') {
@@ -170,7 +179,15 @@ const createProduct = async (req, res) => {
       productData.status = 'Active';
     }
     
+    // Generate SKU if not provided
+    if (!productData.sku) {
+      const prefix = productData.category.substring(0, 2).toUpperCase();
+      const timestamp = Date.now().toString().slice(-6);
+      productData.sku = `VLR-${prefix}-${timestamp}`;
+    }
+    
     const product = await Product.create(productData);
+    console.log('Product created successfully:', product._id);
     
     res.status(201).json({
       success: true,
@@ -179,12 +196,24 @@ const createProduct = async (req, res) => {
     });
   } catch (error) {
     console.error('Create product error:', error);
+    
+    // Handle duplicate key error
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'SKU already exists'
+        message: 'SKU already exists. Please try again.'
       });
     }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to create product',
