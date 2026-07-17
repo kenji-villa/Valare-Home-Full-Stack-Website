@@ -145,14 +145,8 @@ export default function ProductCard({
   };
 
   const handleCardClick = () => {
-    navigate(`/product/${id}`);
+    navigate(`/product/${productId}`);
   };
-
-  console.log("ProductCard rendering with ID:", _id || id);
-  console.log("Product name:", name);
-
-  // Make sure the ID is being used in the link:
-  console.log("Using product ID for link:", productId);
 
   return (
     <div className="product-card cursor-pointer" onClick={handleCardClick}>
@@ -178,7 +172,12 @@ export default function ProductCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              addToCart({ id, name, price, image });
+              addToCart({
+                id: productId,
+                name,
+                price,
+                image,
+              });
             }}
             className="action-btn"
             aria-label="Add to cart"
@@ -188,7 +187,7 @@ export default function ProductCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              toggleFavorite(id);
+              toggleFavorite(productId);
             }}
             className={`action-btn ${isFavorite ? "active" : ""}`}
             aria-label="Add to wishlist"

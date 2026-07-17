@@ -383,8 +383,8 @@ const addRating = async (req, res) => {
       });
     }
     
+    // Check if product exists
     const product = await Product.findById(productId);
-    
     if (!product) {
       return res.status(404).json({
         success: false,
@@ -393,7 +393,9 @@ const addRating = async (req, res) => {
     }
     
     // Check if user already rated this product
-    const existingRating = product.ratings.find(r => r.user.toString() === userId.toString());
+    const existingRating = product.ratings.find(
+      r => r.user && r.user.toString() === userId.toString()
+    );
     
     if (existingRating) {
       // Update existing rating
@@ -404,8 +406,9 @@ const addRating = async (req, res) => {
       // Add new rating
       product.ratings.push({
         user: userId,
-        rating,
-        review: review || ''
+        rating: rating,
+        review: review || '',
+        date: new Date()
       });
     }
     
@@ -413,11 +416,16 @@ const addRating = async (req, res) => {
     product.calculateAverageRating();
     await product.save();
     
+    // Populate user info for the response
+    const updatedProduct = await Product.findById(productId)
+      .populate('ratings.user', 'username');
+    
     res.json({
       success: true,
       message: 'Rating added successfully',
-      averageRating: product.averageRating,
-      reviewCount: product.reviewCount
+      averageRating: updatedProduct.averageRating,
+      reviewCount: updatedProduct.reviewCount,
+      ratings: updatedProduct.ratings
     });
   } catch (error) {
     console.error('Add rating error:', error);
