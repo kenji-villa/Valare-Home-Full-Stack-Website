@@ -310,6 +310,17 @@ export default function ProductDetail() {
             day: "numeric",
           });
 
+          // Get username - check multiple possible locations
+          const username =
+            review.user?.username ||
+            review.user?.name ||
+            review.username ||
+            "Anonymous";
+
+          // Get user initial for avatar
+          const userInitial =
+            username !== "Anonymous" ? username.charAt(0).toUpperCase() : "?";
+
           // Render stars for this review
           const reviewStars = [];
           for (let i = 1; i <= 5; i++) {
@@ -332,13 +343,17 @@ export default function ProductDetail() {
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-5 h-5 text-gray-500" />
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      username !== "Anonymous"
+                        ? "bg-[#DA4C2F]/10 text-[#DA4C2F]"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    <span className="font-semibold text-sm">{userInitial}</span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-800">
-                      {review.user?.username || "Anonymous"}
-                    </p>
+                    <p className="font-medium text-gray-800">{username}</p>
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                       <Calendar className="w-3 h-3" />
                       <span>{formattedDate}</span>
@@ -804,95 +819,82 @@ export default function ProductDetail() {
                 {/* Reviews Tab */}
                 {activeTab === "reviews" && (
                   <div>
-                    {/* Review Form */}
-                    <div className="mb-8">
-                      {user ? (
-                        <div className="bg-gray-50 rounded-lg p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="font-semibold text-gray-800">
-                              Write a Review
-                            </h4>
-                            <button
-                              onClick={() => setShowReviewForm(!showReviewForm)}
-                              className="text-[#DA4C2F] hover:text-[#c43d22] font-medium text-sm"
-                            >
-                              {showReviewForm ? "Cancel" : "Write a Review"}
-                            </button>
+                    {/* Review Form - Always visible when logged in */}
+                    {user ? (
+                      <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                        <h4 className="font-semibold text-gray-800 mb-4">
+                          Write a Review
+                        </h4>
+                        <form onSubmit={handleReviewSubmit}>
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Your Rating
+                            </label>
+                            <div className="flex items-center gap-1">
+                              {renderReviewStars()}
+                              <span className="ml-3 text-sm text-gray-500">
+                                {reviewData.rating > 0
+                                  ? `${reviewData.rating} / 5`
+                                  : "Select rating"}
+                              </span>
+                            </div>
                           </div>
 
-                          {showReviewForm && (
-                            <form onSubmit={handleReviewSubmit}>
-                              <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Your Rating
-                                </label>
-                                <div className="flex items-center gap-1">
-                                  {renderReviewStars()}
-                                  <span className="ml-3 text-sm text-gray-500">
-                                    {reviewData.rating > 0
-                                      ? `${reviewData.rating} / 5`
-                                      : "Select rating"}
-                                  </span>
-                                </div>
-                              </div>
+                          <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Your Review
+                            </label>
+                            <textarea
+                              value={reviewData.review}
+                              onChange={(e) =>
+                                setReviewData((prev) => ({
+                                  ...prev,
+                                  review: e.target.value,
+                                }))
+                              }
+                              rows="4"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] focus:border-transparent resize-none"
+                              placeholder="Share your experience with this product..."
+                            />
+                          </div>
 
-                              <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Your Review
-                                </label>
-                                <textarea
-                                  value={reviewData.review}
-                                  onChange={(e) =>
-                                    setReviewData((prev) => ({
-                                      ...prev,
-                                      review: e.target.value,
-                                    }))
-                                  }
-                                  rows="4"
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#DA4C2F] focus:border-transparent resize-none"
-                                  placeholder="Share your experience with this product..."
-                                />
-                              </div>
+                          <button
+                            type="submit"
+                            disabled={submittingReview}
+                            className="bg-[#DA4C2F] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#c43d22] transition-colors flex items-center gap-2 disabled:opacity-50"
+                          >
+                            {submittingReview ? (
+                              "Submitting..."
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4" />
+                                Submit Review
+                              </>
+                            )}
+                          </button>
+                        </form>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center mb-8">
+                        <p className="text-gray-600">
+                          <Link
+                            to="/login"
+                            className="text-[#DA4C2F] hover:underline font-medium"
+                          >
+                            Login
+                          </Link>{" "}
+                          to write a review
+                        </p>
+                      </div>
+                    )}
 
-                              <button
-                                type="submit"
-                                disabled={submittingReview}
-                                className="bg-[#DA4C2F] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#c43d22] transition-colors flex items-center gap-2 disabled:opacity-50"
-                              >
-                                {submittingReview ? (
-                                  "Submitting..."
-                                ) : (
-                                  <>
-                                    <Send className="w-4 h-4" />
-                                    Submit Review
-                                  </>
-                                )}
-                              </button>
-                            </form>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="bg-gray-50 rounded-lg p-6 text-center">
-                          <p className="text-gray-600">
-                            <Link
-                              to="/login"
-                              className="text-[#DA4C2F] hover:underline font-medium"
-                            >
-                              Login
-                            </Link>{" "}
-                            to write a review
-                          </p>
-                        </div>
-                      )}
-
-                      {reviewSuccess && (
-                        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5" />
-                          Thank you for your review! It has been submitted
-                          successfully.
-                        </div>
-                      )}
-                    </div>
+                    {reviewSuccess && (
+                      <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        Thank you for your review! It has been submitted
+                        successfully.
+                      </div>
+                    )}
 
                     {/* Reviews List */}
                     <div>

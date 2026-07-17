@@ -103,24 +103,18 @@ const getProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   try {
     const productId = req.params.id;
-    console.log('Getting product with ID:', productId);
-    
-    let product;
     
     // Check if ID is valid MongoDB ObjectId
-    if (mongoose.Types.ObjectId.isValid(productId)) {
-      product = await Product.findById(productId);
-    } else {
-      // If not a valid ObjectId, try to find by sku or other field
-      product = await Product.findOne({ sku: productId });
-      
-      // If still not found, try to find by name (case insensitive)
-      if (!product) {
-        product = await Product.findOne({ 
-          name: { $regex: new RegExp(productId, 'i') } 
-        });
-      }
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
     }
+    
+    // Populate user info in ratings
+    const product = await Product.findById(productId)
+      .populate('ratings.user', 'username email');
     
     if (!product) {
       return res.status(404).json({
@@ -128,8 +122,6 @@ const getProductById = async (req, res) => {
         message: 'Product not found'
       });
     }
-    
-    console.log('Product found:', product.name);
     
     res.json({
       success: true,
@@ -403,7 +395,7 @@ const addRating = async (req, res) => {
       if (review) existingRating.review = review;
       existingRating.date = new Date();
     } else {
-      // Add new rating
+      // Add new rating with user info
       product.ratings.push({
         user: userId,
         rating: rating,
@@ -418,7 +410,7 @@ const addRating = async (req, res) => {
     
     // Populate user info for the response
     const updatedProduct = await Product.findById(productId)
-      .populate('ratings.user', 'username');
+      .populate('ratings.user', 'username email');
     
     res.json({
       success: true,

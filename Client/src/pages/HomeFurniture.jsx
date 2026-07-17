@@ -42,6 +42,13 @@ export default function HomeFurniture() {
       setLoading(true);
       const response = await getProducts({ limit: 100 });
       if (response.success) {
+        // Ensure rating data is included for all products
+        const productsWithRating = response.products.map((p) => ({
+          ...p,
+          rating: p.averageRating || p.rating || 0,
+          reviews: p.reviewCount || p.reviews || 0,
+        }));
+
         // Filter to ONLY show Home products (exclude Office)
         const homeProducts = response.products.filter(
           (product) =>

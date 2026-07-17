@@ -13,13 +13,13 @@ export default function ProductCard({
   coverImage,
   images,
   rating,
+  averageRating,
   reviews,
+  reviewCount,
   discount,
   category,
   subcategory,
   isSpecial,
-  averageRating,
-  reviewCount,
 }) {
   const { addToCart, toggleFavorite, favorites } = useCart();
   const navigate = useNavigate();
@@ -93,8 +93,9 @@ export default function ProductCard({
   // Generate star rating
   const renderStars = () => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0 && rating % 1 >= 0.3;
+    // Use productRating which is already set from the API data
+    const fullStars = Math.floor(productRating);
+    const hasHalfStar = productRating % 1 !== 0 && productRating % 1 >= 0.3;
 
     for (let i = 0; i < fullStars; i++) {
       stars.push(

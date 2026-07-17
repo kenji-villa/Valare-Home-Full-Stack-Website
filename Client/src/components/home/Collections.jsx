@@ -64,9 +64,13 @@ export default function Collections({
           </div>
         ) : (
           <div className="has-scrollbar">
-            {products.map((product) => (
+            {products.slice(0, 10).map((product) => (
               <div key={product._id || product.id} className="scrollbar-item">
-                <ProductCard {...product} />
+                <ProductCard
+                  {...product}
+                  rating={product.averageRating || product.rating || 0}
+                  reviews={product.reviewCount || product.reviews || 0}
+                />
               </div>
             ))}
           </div>

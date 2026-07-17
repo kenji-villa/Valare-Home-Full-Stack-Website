@@ -39,6 +39,13 @@ export default function Office() {
       setLoading(true);
       const response = await getProducts({ limit: 100 });
       if (response.success) {
+        // Ensure rating data is included
+        const productsWithRating = response.products.map((p) => ({
+          ...p,
+          rating: p.averageRating || p.rating || 0,
+          reviews: p.reviewCount || p.reviews || 0,
+        }));
+
         // Filter products to only show Office category and its subcategories
         const officeProducts = response.products.filter(
           (product) =>

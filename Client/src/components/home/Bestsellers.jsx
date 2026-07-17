@@ -108,10 +108,15 @@ export default function Bestsellers({
             <i className="bx bx-right-arrow-alt text-xl"></i>
           </a>
         </div>
+
         <div className="has-scrollbar">
-          {displayProducts.map((product) => (
-            <div key={product.id} className="scrollbar-item">
-              <ProductCard {...product} />
+          {displayProducts.slice(0, 10).map((product) => (
+            <div key={product._id || product.id} className="scrollbar-item">
+              <ProductCard
+                {...product}
+                rating={product.averageRating || product.rating || 0}
+                reviews={product.reviewCount || product.reviews || 0}
+              />
             </div>
           ))}
         </div>

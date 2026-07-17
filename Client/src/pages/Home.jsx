@@ -30,14 +30,25 @@ export default function Home() {
         const featuredResponse = await getFeaturedProducts();
         console.log("Featured Products:", featuredResponse);
         if (featuredResponse.success) {
-          setFeaturedProducts(featuredResponse.products);
+          // Ensure rating data is included
+          const productsWithRating = featuredResponse.products.map((p) => ({
+            ...p,
+            rating: p.averageRating || p.rating || 0,
+            reviews: p.reviewCount || p.reviews || 0,
+          }));
+          setFeaturedProducts(productsWithRating);
         }
 
         // Fetch special products for Collections section
         const specialResponse = await getSpecialProducts();
         console.log("Special Products:", specialResponse); // Debug log
         if (specialResponse.success) {
-          setSpecialProducts(specialResponse.products);
+          const productsWithRating = specialResponse.products.map((p) => ({
+            ...p,
+            rating: p.averageRating || p.rating || 0,
+            reviews: p.reviewCount || p.reviews || 0,
+          }));
+          setSpecialProducts(productsWithRating);
         }
 
         setError(null);
