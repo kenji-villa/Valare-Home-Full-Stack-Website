@@ -208,7 +208,7 @@ export default function ProductCard({
             {productPrice}
           </span>
         </div>
-        <Link to={`/product/${productId}`}>
+        <Link to={`/product/${_id || id}`}>
           <h3 className="font-medium text-gray-800 mb-2 text-base line-clamp-2 hover:text-[#DA4C2F] transition-colors">
             {productName}
           </h3>

@@ -58,7 +58,18 @@ export default function ProductDetail() {
         setLoading(true);
         setError(null);
 
+        // Log the ID to debug
+        console.log("Fetching product with ID:", id);
+
+        // Check if ID is valid
+        if (!id) {
+          setError("No product ID provided");
+          setLoading(false);
+          return;
+        }
+
         const response = await getProductById(id);
+        console.log("API Response:", response);
 
         if (response.success && response.product) {
           const productData = response.product;
@@ -71,7 +82,10 @@ export default function ProductDetail() {
             "/assets/images/placeholder.jpg";
           setMainImage(mainImg);
 
-          const thumbs = productData.images || [mainImg];
+          const thumbs =
+            productData.images && productData.images.length > 0
+              ? productData.images
+              : [mainImg];
           setThumbnails(thumbs);
 
           // Set selected color
@@ -93,11 +107,11 @@ export default function ProductDetail() {
             console.error("Error fetching related products:", relatedError);
           }
         } else {
-          setError("Product not found");
+          setError(response.message || "Product not found");
         }
       } catch (err) {
         console.error("Error fetching product:", err);
-        setError("Failed to load product. Please try again.");
+        setError(err.message || "Failed to load product. Please try again.");
       } finally {
         setLoading(false);
       }

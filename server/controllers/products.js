@@ -102,7 +102,18 @@ const getProducts = async (req, res) => {
 // @access  Public
 const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const productId = req.params.id;
+    console.log('Getting product with ID:', productId);
+    
+    // Check if ID is valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+    
+    const product = await Product.findById(productId);
     
     if (!product) {
       return res.status(404).json({
@@ -111,18 +122,14 @@ const getProductById = async (req, res) => {
       });
     }
     
+    console.log('Product found:', product.name);
+    
     res.json({
       success: true,
       product
     });
   } catch (error) {
     console.error('Get product error:', error);
-    if (error.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid product ID'
-      });
-    }
     res.status(500).json({
       success: false,
       message: 'Failed to fetch product',

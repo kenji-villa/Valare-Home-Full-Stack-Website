@@ -59,8 +59,27 @@ export const getProducts = async (filters = {}) => {
 
 // Get single product
 export const getProductById = async (id) => {
-  const response = await fetch(API_ENDPOINTS.PRODUCTS.SINGLE(id));
-  return response.json();
+  try {
+    if (!id) {
+      throw new Error('Product ID is required');
+    }
+    
+    console.log('Fetching product from API:', `${API_ENDPOINTS.PRODUCTS.SINGLE(id)}`);
+    
+    const response = await fetch(API_ENDPOINTS.PRODUCTS.SINGLE(id));
+    const data = await response.json();
+    
+    console.log('Product API response:', data);
+    
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Get product by ID error:', error);
+    throw error;
+  }
 };
 
 // Get featured products
