@@ -58,29 +58,7 @@ export default function ProductDetail() {
         setLoading(true);
         setError(null);
 
-        // Log the ID to debug
-        console.log("useParams id:", id);
-        console.log("Type of ID:", typeof id);
-
-        // Check if ID exists
-        if (!id) {
-          setError("No product ID provided");
-          setLoading(false);
-          return;
-        }
-
-        // Check if ID is valid (24 character hex string for MongoDB ObjectId)
-        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-        console.log("Is valid ObjectId?", isValidObjectId);
-
-        if (!isValidObjectId) {
-          setError("Invalid product ID format");
-          setLoading(false);
-          return;
-        }
-
         const response = await getProductById(id);
-        console.log("API Response:", response);
 
         if (response.success && response.product) {
           const productData = response.product;

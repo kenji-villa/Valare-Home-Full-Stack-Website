@@ -28,7 +28,6 @@ export default function Home() {
 
         // Fetch featured products for Bestsellers section
         const featuredResponse = await getFeaturedProducts();
-        console.log("Featured Products:", featuredResponse);
         if (featuredResponse.success) {
           // Ensure rating data is included
           const productsWithRating = featuredResponse.products.map((p) => ({
@@ -41,7 +40,6 @@ export default function Home() {
 
         // Fetch special products for Collections section
         const specialResponse = await getSpecialProducts();
-        console.log("Special Products:", specialResponse); // Debug log
         if (specialResponse.success) {
           const productsWithRating = specialResponse.products.map((p) => ({
             ...p,

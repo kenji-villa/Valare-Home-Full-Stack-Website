@@ -150,7 +150,6 @@ export default function ProductForm({
           ...prev,
           images: [...prev.images, ...uploadedPaths],
         }));
-        console.log("Images uploaded successfully:", uploadedPaths);
       }
     } catch (error) {
       console.error("Upload error:", error);
