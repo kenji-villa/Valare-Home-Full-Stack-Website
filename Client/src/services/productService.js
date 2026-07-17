@@ -64,17 +64,18 @@ export const getProductById = async (id) => {
       throw new Error('Product ID is required');
     }
     
-    console.log('Fetching product from API:', `${API_ENDPOINTS.PRODUCTS.SINGLE(id)}`);
+    console.log('Fetching product with ID:', id);
+    console.log('API URL:', API_ENDPOINTS.PRODUCTS.SINGLE(id));
     
     const response = await fetch(API_ENDPOINTS.PRODUCTS.SINGLE(id));
-    const data = await response.json();
-    
-    console.log('Product API response:', data);
     
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     
+    const data = await response.json();
+    console.log('Product data received:', data);
     return data;
   } catch (error) {
     console.error('Get product by ID error:', error);

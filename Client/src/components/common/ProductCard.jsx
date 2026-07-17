@@ -148,6 +148,12 @@ export default function ProductCard({
     navigate(`/product/${id}`);
   };
 
+  console.log("ProductCard rendering with ID:", _id || id);
+  console.log("Product name:", name);
+
+  // Make sure the ID is being used in the link:
+  console.log("Using product ID for link:", productId);
+
   return (
     <div className="product-card cursor-pointer" onClick={handleCardClick}>
       <div

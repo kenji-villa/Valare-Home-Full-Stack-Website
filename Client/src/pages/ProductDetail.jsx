@@ -51,24 +51,41 @@ export default function ProductDetail() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  // Fetch product from API
+  const getProductId = () => {
+    // First try useParams
+    if (id) return id;
+
+    // If useParams fails, extract from pathname
+    const pathParts = location.pathname.split("/");
+    const lastPart = pathParts[pathParts.length - 1];
+    if (lastPart && lastPart.length === 24) {
+      return lastPart;
+    }
+
+    return null;
+  };
+
+  const productId = getProductId();
+
   useEffect(() => {
+    console.log("Location pathname:", location.pathname);
+    console.log("useParams id:", id);
+    console.log("Extracted productId:", productId);
+
     const fetchProduct = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Log the ID to debug
-        console.log("Fetching product with ID:", id);
-
-        // Check if ID is valid
-        if (!id) {
+        if (!productId) {
           setError("No product ID provided");
           setLoading(false);
           return;
         }
 
-        const response = await getProductById(id);
+        console.log("Fetching product with ID:", productId);
+
+        const response = await getProductById(productId);
         console.log("API Response:", response);
 
         if (response.success && response.product) {
@@ -88,18 +105,15 @@ export default function ProductDetail() {
               : [mainImg];
           setThumbnails(thumbs);
 
-          // Set selected color
           if (productData.color) {
             setSelectedColor(productData.color);
           }
 
-          // Check if product is in wishlist
           const isFav = favorites.includes(productData._id);
           setIsWishlist(isFav);
 
-          // Fetch related products
           try {
-            const relatedResponse = await getRelatedProducts(id);
+            const relatedResponse = await getRelatedProducts(productId);
             if (relatedResponse.success) {
               setRelatedProducts(relatedResponse.products || []);
             }
@@ -117,10 +131,10 @@ export default function ProductDetail() {
       }
     };
 
-    if (id) {
+    if (productId) {
       fetchProduct();
     }
-  }, [id, favorites]);
+  }, [productId, favorites]);
 
   const handleQuantityChange = (delta) => {
     setQuantity((prev) => Math.max(1, prev + delta));
@@ -469,28 +483,6 @@ export default function ProductDetail() {
                     />
                     {isWishlist ? "Liked" : "Like"}
                   </button>
-                </div>
-
-                {/* Share */}
-                <div>
-                  <span className="font-medium block mb-2">Share:</span>
-                  <div className="flex gap-2">
-                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#1877f2] hover:text-white transition-colors flex items-center justify-center">
-                      <Facebook className="w-5 h-5" />
-                    </button>
-                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#1da1f2] hover:text-white transition-colors flex items-center justify-center">
-                      <Twitter className="w-5 h-5" />
-                    </button>
-                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#e4405f] hover:text-white transition-colors flex items-center justify-center">
-                      <Instagram className="w-5 h-5" />
-                    </button>
-                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-[#0a66c2] hover:text-white transition-colors flex items-center justify-center">
-                      <Linkedin className="w-5 h-5" />
-                    </button>
-                    <button className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center">
-                      <Share2 className="w-5 h-5" />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>

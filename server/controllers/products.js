@@ -105,15 +105,22 @@ const getProductById = async (req, res) => {
     const productId = req.params.id;
     console.log('Getting product with ID:', productId);
     
-    // Check if ID is valid MongoDB ObjectId
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid product ID format'
-      });
-    }
+    let product;
     
-    const product = await Product.findById(productId);
+    // Check if ID is valid MongoDB ObjectId
+    if (mongoose.Types.ObjectId.isValid(productId)) {
+      product = await Product.findById(productId);
+    } else {
+      // If not a valid ObjectId, try to find by sku or other field
+      product = await Product.findOne({ sku: productId });
+      
+      // If still not found, try to find by name (case insensitive)
+      if (!product) {
+        product = await Product.findOne({ 
+          name: { $regex: new RegExp(productId, 'i') } 
+        });
+      }
+    }
     
     if (!product) {
       return res.status(404).json({
