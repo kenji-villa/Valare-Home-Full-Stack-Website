@@ -11,6 +11,7 @@ export const API_ENDPOINTS = {
     ME: `${API_BASE_URL}/auth/me`,
     PROFILE: `${API_BASE_URL}/auth/profile`,
     CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
+    WISHLIST: `${API_BASE_URL}/auth/me/wishlist`,
   },
   // Products
   PRODUCTS: {

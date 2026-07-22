@@ -4,32 +4,30 @@ import {
   addToWishlist,
   removeFromWishlist,
 } from "../services/authService";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  const { user } = useAuth();
   const [cartItems, setCartItems] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [user, setUser] = useState(null);
 
-  // Load wishlist from API when user logs in
+  // Load wishlist when user logs in
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    const userData = localStorage.getItem("userData");
-
-    if (token && userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+    if (user) {
       loadWishlist();
+    } else {
+      setFavorites([]);
     }
-  }, []);
+  }, [user]);
 
   const loadWishlist = async () => {
     try {
       const response = await getWishlist();
-      if (response.success) {
-        const wishlistIds = response.wishlist.map((p) => p._id);
-        setFavorites(wishlistIds);
+      if (response.success && response.wishlist) {
+        const productIds = response.wishlist.map((p) => p._id);
+        setFavorites(productIds);
       }
     } catch (error) {
       console.error("Error loading wishlist:", error);
@@ -76,9 +74,14 @@ export function CartProvider({ children }) {
   };
 
   const toggleFavorite = async (productId) => {
-    try {
-      const isFavorite = favorites.includes(productId);
+    if (!user) {
+      alert("Please login to save favorites.");
+      return;
+    }
 
+    const isFavorite = favorites.includes(productId);
+
+    try {
       if (isFavorite) {
         await removeFromWishlist(productId);
         setFavorites((prev) => prev.filter((id) => id !== productId));
@@ -87,9 +90,8 @@ export function CartProvider({ children }) {
         setFavorites((prev) => [...prev, productId]);
       }
     } catch (error) {
-      console.error("Toggle wishlist error:", error);
-      // Revert UI state if API call fails
-      // You might want to show an error message here
+      console.error("Toggle favorite error:", error);
+      alert("Failed to update favorites. Please try again.");
     }
   };
 

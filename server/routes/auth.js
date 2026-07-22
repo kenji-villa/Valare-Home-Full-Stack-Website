@@ -51,8 +51,9 @@ router.post('/create-admin', authenticateUser, authorizeAdmin, authController.cr
 
 
 // Wishlist routes
-router.get('/wishlist', authenticateUser, authController.getWishlist);
-router.post('/wishlist/:productId', authenticateUser, authController.addToWishlist);
-router.delete('/wishlist/:productId', authenticateUser, authController.removeFromWishlist);
+router.get('/me/wishlist', authenticateUser, authController.getWishlist);
+router.post('/me/wishlist/:productId', authenticateUser, authController.addToWishlist);
+router.delete('/me/wishlist/:productId', authenticateUser, authController.removeFromWishlist);
+
 
 module.exports = router;

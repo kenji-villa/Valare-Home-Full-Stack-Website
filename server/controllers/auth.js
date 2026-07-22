@@ -195,8 +195,7 @@ const getWishlist = async (req, res) => {
 // @access  Private
 const addToWishlist = async (req, res) => {
   try {
-    const productId = req.params.productId;
-    const userId = req.user._id;
+    const { productId } = req.params;
     
     // Check if product exists
     const product = await Product.findById(productId);
@@ -207,8 +206,9 @@ const addToWishlist = async (req, res) => {
       });
     }
     
-    // Check if already in wishlist
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user._id);
+    
+    // Check if product already in wishlist
     if (user.wishlist.includes(productId)) {
       return res.status(400).json({
         success: false,
@@ -216,20 +216,16 @@ const addToWishlist = async (req, res) => {
       });
     }
     
-    // Add to wishlist
     user.wishlist.push(productId);
     await user.save();
     
-    // Populate wishlist
-    await user.populate({
-      path: 'wishlist',
-      select: 'name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock'
-    });
+    const updatedUser = await User.findById(req.user._id)
+      .populate('wishlist');
     
     res.json({
       success: true,
       message: 'Product added to wishlist',
-      wishlist: user.wishlist
+      wishlist: updatedUser.wishlist
     });
   } catch (error) {
     console.error('Add to wishlist error:', error);
@@ -246,12 +242,11 @@ const addToWishlist = async (req, res) => {
 // @access  Private
 const removeFromWishlist = async (req, res) => {
   try {
-    const productId = req.params.productId;
-    const userId = req.user._id;
+    const { productId } = req.params;
     
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user._id);
     
-    // Check if in wishlist
+    // Check if product is in wishlist
     if (!user.wishlist.includes(productId)) {
       return res.status(400).json({
         success: false,
@@ -259,20 +254,18 @@ const removeFromWishlist = async (req, res) => {
       });
     }
     
-    // Remove from wishlist
-    user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+    user.wishlist = user.wishlist.filter(
+      id => id.toString() !== productId
+    );
     await user.save();
     
-    // Populate wishlist
-    await user.populate({
-      path: 'wishlist',
-      select: 'name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock'
-    });
+    const updatedUser = await User.findById(req.user._id)
+      .populate('wishlist');
     
     res.json({
       success: true,
       message: 'Product removed from wishlist',
-      wishlist: user.wishlist
+      wishlist: updatedUser.wishlist
     });
   } catch (error) {
     console.error('Remove from wishlist error:', error);
@@ -283,6 +276,7 @@ const removeFromWishlist = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
