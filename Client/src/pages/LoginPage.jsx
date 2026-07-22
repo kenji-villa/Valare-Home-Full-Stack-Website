@@ -145,6 +145,38 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+    if (data.success) {
+      // Store auth data
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userData", JSON.stringify(data.user));
+
+      // Load wishlist from server
+      try {
+        const wishlistResponse = await fetch(
+          "http://localhost:3001/api/auth/wishlist",
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`,
+            },
+          },
+        );
+        const wishlistData = await wishlistResponse.json();
+        if (wishlistData.success) {
+          const wishlistIds = wishlistData.wishlist.map((item) =>
+            typeof item === "object" ? item._id : item,
+          );
+          localStorage.setItem("favorites", JSON.stringify(wishlistIds));
+          // Trigger update
+          window.dispatchEvent(
+            new CustomEvent("wishlistUpdated", {
+              detail: { wishlist: wishlistIds },
+            }),
+          );
+        }
+      } catch (error) {
+        console.error("Error loading wishlist after login:", error);
+      }
+    }
   };
 
   const handleRegisterSubmit = async (e) => {

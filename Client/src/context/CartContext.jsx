@@ -1,4 +1,9 @@
 import { createContext, useState, useContext, useEffect } from "react";
+import {
+  toggleWishlist,
+  getWishlist,
+  syncWishlist,
+} from "../services/authService";
 
 const CartContext = createContext();
 
@@ -19,6 +24,23 @@ export function CartProvider({ children }) {
         setFavorites([]);
       }
     }
+  }, []);
+
+  // Listen for wishlist updates from AuthContext
+  useEffect(() => {
+    const handleWishlistUpdate = (event) => {
+      if (event.detail && event.detail.wishlist) {
+        setFavorites(event.detail.wishlist);
+        localStorage.setItem(
+          "favorites",
+          JSON.stringify(event.detail.wishlist),
+        );
+      }
+    };
+
+    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
+    return () =>
+      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
   }, []);
 
   // Save favorites to localStorage whenever they change
@@ -68,17 +90,41 @@ export function CartProvider({ children }) {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  // Toggle favorite - persists to localStorage
-  const toggleFavorite = (productId) => {
+  // Toggle favorite - syncs with database if logged in
+  const toggleFavorite = async (productId) => {
+    const token = localStorage.getItem("authToken");
+
+    if (token) {
+      // User is logged in - sync with database
+      try {
+        const response = await toggleWishlist(productId);
+        if (response.success) {
+          // Update local state from server response
+          const wishlistIds = response.wishlist.map((item) =>
+            typeof item === "object" ? item._id : item,
+          );
+          setFavorites(wishlistIds);
+          localStorage.setItem("favorites", JSON.stringify(wishlistIds));
+        }
+      } catch (error) {
+        console.error("Toggle wishlist error:", error);
+        // Fallback: toggle locally
+        toggleLocalFavorite(productId);
+      }
+    } else {
+      // Guest user - local only
+      toggleLocalFavorite(productId);
+    }
+  };
+
+  // Local toggle (for guest users or fallback)
+  const toggleLocalFavorite = (productId) => {
     setFavorites((prev) => {
       const isFavorite = prev.includes(productId);
       const newFavorites = isFavorite
         ? prev.filter((id) => id !== productId)
         : [...prev, productId];
-
-      // Save to localStorage
       localStorage.setItem("favorites", JSON.stringify(newFavorites));
-
       return newFavorites;
     });
   };
@@ -94,11 +140,22 @@ export function CartProvider({ children }) {
     localStorage.removeItem("favorites");
   };
 
-  // Sync favorites from API (for logged-in users)
-  const syncFavorites = (apiFavorites) => {
-    if (apiFavorites && Array.isArray(apiFavorites)) {
-      setFavorites(apiFavorites);
-      localStorage.setItem("favorites", JSON.stringify(apiFavorites));
+  // Sync favorites with server (used after login)
+  const syncFavoritesFromServer = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      const response = await getWishlist();
+      if (response.success && response.wishlist) {
+        const wishlistIds = response.wishlist.map((item) =>
+          typeof item === "object" ? item._id : item,
+        );
+        setFavorites(wishlistIds);
+        localStorage.setItem("favorites", JSON.stringify(wishlistIds));
+      }
+    } catch (error) {
+      console.error("Sync favorites error:", error);
     }
   };
 
@@ -114,7 +171,7 @@ export function CartProvider({ children }) {
     toggleFavorite,
     isFavorite,
     clearFavorites,
-    syncFavorites,
+    syncFavoritesFromServer,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

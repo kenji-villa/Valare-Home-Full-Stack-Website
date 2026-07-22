@@ -27,11 +27,14 @@ export function AuthProvider({ children }) {
     setIsLoading(false);
   }, []);
 
-  const login = (userData, authToken) => {
+  const login = async (userData, authToken) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem("authToken", authToken);
     localStorage.setItem("userData", JSON.stringify(userData));
+
+    // Load wishlist from database after login
+    await loadUserWishlist(authToken);
 
     // Redirect based on role
     if (userData.role === "admin") {
@@ -46,7 +49,33 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
+    localStorage.removeItem("favorites");
     navigate("/login");
+  };
+
+  const loadUserWishlist = async (authToken) => {
+    try {
+      const tokenToUse = authToken || localStorage.getItem("authToken");
+      if (!tokenToUse) return;
+
+      const response = await getWishlist();
+      if (response.success && response.wishlist) {
+        // Get product IDs from wishlist
+        const wishlistIds = response.wishlist.map((item) =>
+          typeof item === "object" ? item._id : item,
+        );
+        // Save to localStorage
+        localStorage.setItem("favorites", JSON.stringify(wishlistIds));
+        // Trigger a custom event so CartContext can update
+        window.dispatchEvent(
+          new CustomEvent("wishlistUpdated", {
+            detail: { wishlist: wishlistIds },
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("Error loading wishlist:", error);
+    }
   };
 
   const isAdmin = user?.role === "admin";
@@ -60,6 +89,7 @@ export function AuthProvider({ children }) {
         isLoading,
         login,
         logout,
+        loadUserWishlist,
         isAdmin,
         isCustomer,
       }}

@@ -38,6 +38,18 @@ const fetchWithAuth = async (url, options = {}) => {
   }
 };
 
+// Get user's wishlist
+export const getWishlist = async () => {
+  try {
+    return await fetchWithAuth(`${API_BASE_URL}/auth/wishlist`, {
+      method: 'GET',
+    });
+  } catch (error) {
+    console.error('Get wishlist error:', error);
+    throw error;
+  }
+};
+
 // Toggle wishlist (add/remove)
 export const toggleWishlist = async (productId) => {
   try {
@@ -54,14 +66,50 @@ export const toggleWishlist = async (productId) => {
   }
 };
 
-// Get user's wishlist
-export const getWishlist = async () => {
+// Add to wishlist
+export const addToWishlist = async (productId) => {
   try {
-    return await fetchWithAuth(`${API_BASE_URL}/auth/wishlist`, {
-      method: 'GET',
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
+    return await fetchWithAuth(`${API_BASE_URL}/auth/wishlist/add`, {
+      method: 'POST',
+      body: JSON.stringify({ productId }),
     });
   } catch (error) {
-    console.error('Get wishlist error:', error);
+    console.error('Add to wishlist error:', error);
+    throw error;
+  }
+};
+
+// Remove from wishlist
+export const removeFromWishlist = async (productId) => {
+  try {
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
+    return await fetchWithAuth(`${API_BASE_URL}/auth/wishlist/remove`, {
+      method: 'DELETE',
+      body: JSON.stringify({ productId }),
+    });
+  } catch (error) {
+    console.error('Remove from wishlist error:', error);
+    throw error;
+  }
+};
+
+// Sync local wishlist with server
+export const syncWishlist = async (localWishlist) => {
+  try {
+    const token = getAuthToken();
+    if (!token) return null;
+    
+    return await fetchWithAuth(`${API_BASE_URL}/auth/wishlist/sync`, {
+      method: 'POST',
+      body: JSON.stringify({ wishlist: localWishlist }),
+    });
+  } catch (error) {
+    console.error('Sync wishlist error:', error);
     throw error;
   }
 };

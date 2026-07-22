@@ -312,8 +312,6 @@ const addToWishlist = async (req, res) => {
     
     user.wishlist.push(productId);
     await user.save();
-    
-    // Populate wishlist with product details
     await user.populate('wishlist');
     
     res.json({
@@ -347,13 +345,10 @@ const removeFromWishlist = async (req, res) => {
     
     const user = await User.findById(req.user._id);
     
-    // Remove product from wishlist
     user.wishlist = user.wishlist.filter(
       id => id.toString() !== productId.toString()
     );
     await user.save();
-    
-    // Populate wishlist with product details
     await user.populate('wishlist');
     
     res.json({
@@ -387,11 +382,9 @@ const toggleWishlist = async (req, res) => {
     
     const user = await User.findById(req.user._id);
     
-    // Check if product is in wishlist
     const index = user.wishlist.indexOf(productId);
     
     if (index > -1) {
-      // Remove from wishlist
       user.wishlist.splice(index, 1);
       await user.save();
       await user.populate('wishlist');
@@ -402,7 +395,6 @@ const toggleWishlist = async (req, res) => {
         wishlist: user.wishlist
       });
     } else {
-      // Add to wishlist
       user.wishlist.push(productId);
       await user.save();
       await user.populate('wishlist');
