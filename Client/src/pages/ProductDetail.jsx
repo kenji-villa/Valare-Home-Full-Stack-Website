@@ -25,7 +25,7 @@ import { useAuth } from "../context/AuthContext";
 import { getProductById, getRelatedProducts } from "../services/productService";
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { id: paramId } = useParams();
   const navigate = useNavigate();
   const { addToCart, toggleFavorite, favorites } = useCart();
   const { user } = useAuth();
@@ -36,7 +36,6 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState("");
   const [activeTab, setActiveTab] = useState("description");
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const isWishlist = favorites.includes(product._id);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const [mainImage, setMainImage] = useState("");
   const [thumbnails, setThumbnails] = useState([]);
@@ -51,6 +50,19 @@ export default function ProductDetail() {
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
 
+  // Get product ID from URL
+  const getProductId = () => {
+    if (paramId) return paramId;
+    const pathParts = location.pathname.split("/");
+    const lastPart = pathParts[pathParts.length - 1];
+    if (lastPart && lastPart.length === 24) {
+      return lastPart;
+    }
+    return null;
+  };
+
+  const productId = getProductId();
+
   // Fetch product from API
   useEffect(() => {
     const fetchProduct = async () => {
@@ -58,7 +70,13 @@ export default function ProductDetail() {
         setLoading(true);
         setError(null);
 
-        const response = await getProductById(id);
+        if (!productId) {
+          setError("No product ID provided");
+          setLoading(false);
+          return;
+        }
+
+        const response = await getProductById(productId);
 
         if (response.success && response.product) {
           const productData = response.product;
@@ -82,13 +100,9 @@ export default function ProductDetail() {
             setSelectedColor(productData.color);
           }
 
-          // Check if product is in wishlist
-          const isFav = favorites.includes(productData._id);
-          setIsWishlist(isFav);
-
           // Fetch related products
           try {
-            const relatedResponse = await getRelatedProducts(id);
+            const relatedResponse = await getRelatedProducts(productId);
             if (relatedResponse.success) {
               setRelatedProducts(relatedResponse.products || []);
             }
@@ -106,12 +120,45 @@ export default function ProductDetail() {
       }
     };
 
-    fetchProduct();
-  }, [id, favorites]);
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId]);
 
   const handleQuantityChange = (delta) => {
     setQuantity((prev) => Math.max(1, prev + delta));
   };
+
+  const handleAddToCart = () => {
+    if (product) {
+      const price =
+        typeof product.price === "number"
+          ? `ETB ${product.price.toFixed(2)}`
+          : product.price;
+      addToCart({
+        id: product._id,
+        name: product.name,
+        price: price,
+        image: mainImage,
+        quantity: quantity,
+      });
+      setIsAddedToCart(true);
+      setTimeout(() => setIsAddedToCart(false), 2000);
+    }
+  };
+
+  const handleWishlistToggle = () => {
+    if (product) {
+      toggleFavorite(product._id);
+    }
+  };
+
+  const handleThumbnailClick = (imageUrl) => {
+    setMainImage(imageUrl);
+  };
+
+  // Check if product is in favorites
+  const isWishlist = product ? favorites.includes(product._id) : false;
 
   const renderStars = (rating) => {
     const stars = [];
@@ -140,35 +187,6 @@ export default function ProductDetail() {
       stars.push(<Star key={`empty-${i}`} className="w-4 h-4 text-gray-300" />);
     }
     return stars;
-  };
-
-  const handleAddToCart = () => {
-    if (product) {
-      const price =
-        typeof product.price === "number"
-          ? `ETB ${product.price.toFixed(2)}`
-          : product.price;
-      addToCart({
-        id: product._id,
-        name: product.name,
-        price: price,
-        image: mainImage,
-        quantity: quantity,
-      });
-      setIsAddedToCart(true);
-      setTimeout(() => setIsAddedToCart(false), 2000);
-    }
-  };
-
-  const handleWishlistToggle = () => {
-    if (product) {
-      toggleFavorite(product._id);
-      // The isWishlist will update automatically via the favorites state
-    }
-  };
-
-  const handleThumbnailClick = (imageUrl) => {
-    setMainImage(imageUrl);
   };
 
   // Handle review submission

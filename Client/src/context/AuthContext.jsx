@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getWishlist } from "../services/authService";
 
 const AuthContext = createContext();
 
