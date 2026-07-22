@@ -1,9 +1,5 @@
 import { createContext, useState, useContext, useEffect } from "react";
-import {
-  getWishlist,
-  addToWishlist,
-  removeFromWishlist,
-} from "../services/authService";
+import { toggleWishlist as apiToggleWishlist } from "../services/authService";
 import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
@@ -15,12 +11,20 @@ export function CartProvider({ children }) {
 
   // Load wishlist when user logs in
   useEffect(() => {
-    if (user) {
-      loadWishlist();
-    } else {
-      setFavorites([]);
+    const savedFavorites = localStorage.getItem("favorites");
+    if (savedFavorites) {
+      try {
+        setFavorites(JSON.parse(savedFavorites));
+      } catch (e) {
+        console.error("Error loading favorites:", e);
+      }
     }
-  }, [user]);
+  }, []);
+
+  // Save favorites to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+  }, [favorites]);
 
   const addToCart = (product) => {
     setCartItems((prev) => {
@@ -61,39 +65,55 @@ export function CartProvider({ children }) {
     }, 0);
   };
 
+  // Toggle favorite (wishlist) - Local only for now
   const toggleFavorite = async (productId) => {
     try {
-      // Only proceed if user is logged in
       const token = localStorage.getItem("authToken");
-      if (!token) {
-        // For guest users, just toggle locally
-        setFavorites((prev) =>
-          prev.includes(productId)
+
+      if (token) {
+        // User is logged in - use API
+        const response = await apiToggleWishlist(productId);
+        if (response.success) {
+          const wishlistIds = response.wishlist.map((item) =>
+            typeof item === "object" ? item._id : item,
+          );
+          setFavorites(wishlistIds);
+          localStorage.setItem("favorites", JSON.stringify(wishlistIds));
+        }
+      } else {
+        // Guest user - local only
+        setFavorites((prev) => {
+          const isFavorite = prev.includes(productId);
+          const newFavorites = isFavorite
             ? prev.filter((id) => id !== productId)
-            : [...prev, productId],
-        );
-        return;
-      }
-
-      // For logged-in users, call the API
-      const response = await toggleWishlist(productId);
-
-      if (response.success) {
-        // Update local favorites from the response
-        const wishlistIds = response.wishlist.map((item) =>
-          typeof item === "object" ? item._id : item,
-        );
-        setFavorites(wishlistIds);
+            : [...prev, productId];
+          localStorage.setItem("favorites", JSON.stringify(newFavorites));
+          return newFavorites;
+        });
       }
     } catch (error) {
       console.error("Toggle favorite error:", error);
-      // Fallback: toggle locally
-      setFavorites((prev) =>
-        prev.includes(productId)
+      // Fallback to local toggle
+      setFavorites((prev) => {
+        const isFavorite = prev.includes(productId);
+        const newFavorites = isFavorite
           ? prev.filter((id) => id !== productId)
-          : [...prev, productId],
-      );
+          : [...prev, productId];
+        localStorage.setItem("favorites", JSON.stringify(newFavorites));
+        return newFavorites;
+      });
     }
+  };
+
+  // Check if product is in favorites
+  const isFavorite = (productId) => {
+    return favorites.includes(productId);
+  };
+
+  // Clear all favorites
+  const clearFavorites = () => {
+    setFavorites([]);
+    localStorage.removeItem("favorites");
   };
 
   const loadWishlist = async () => {

@@ -186,10 +186,7 @@ export default function ProductCard({
             <ShoppingBag className="w-5 h-5" />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(productId);
-            }}
+            onClick={() => toggleFavorite(productId)}
             className={`action-btn ${isFavorite ? "active" : ""}`}
             aria-label="Add to wishlist"
           >

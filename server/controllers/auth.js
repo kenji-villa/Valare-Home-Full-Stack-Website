@@ -456,5 +456,6 @@ module.exports = {
   createAdmin,
   getWishlist,
   addToWishlist,
-  removeFromWishlist
+  removeFromWishlist,
+  toggleWishlist
 };
