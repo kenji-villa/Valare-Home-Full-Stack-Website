@@ -40,20 +40,21 @@ const loginValidation = [
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
 
+
 // Private routes
 router.get('/me', authenticateUser, authController.getMe);
 router.put('/profile', authenticateUser, authController.updateProfile);
 router.put('/change-password', authenticateUser, authController.changePassword);
 router.post('/logout', authenticateUser, authController.logout);
 
+router.get('/wishlist', authenticateUser, authController.getWishlist);
+router.post('/wishlist/add', authenticateUser, authController.addToWishlist);
+router.delete('/wishlist/remove', authenticateUser, authController.removeFromWishlist);
+router.post('/wishlist/toggle', authenticateUser, authController.toggleWishlist);
+
+
 // Admin only routes
 router.post('/create-admin', authenticateUser, authorizeAdmin, authController.createAdmin);
-
-
-// Wishlist routes
-router.get('/me/wishlist', authenticateUser, authController.getWishlist);
-router.post('/me/wishlist/:productId', authenticateUser, authController.addToWishlist);
-router.delete('/me/wishlist/:productId', authenticateUser, authController.removeFromWishlist);
 
 
 module.exports = router;

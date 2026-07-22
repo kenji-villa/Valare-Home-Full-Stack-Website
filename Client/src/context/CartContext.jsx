@@ -22,18 +22,6 @@ export function CartProvider({ children }) {
     }
   }, [user]);
 
-  const loadWishlist = async () => {
-    try {
-      const response = await getWishlist();
-      if (response.success && response.wishlist) {
-        const productIds = response.wishlist.map((p) => p._id);
-        setFavorites(productIds);
-      }
-    } catch (error) {
-      console.error("Error loading wishlist:", error);
-    }
-  };
-
   const addToCart = (product) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -74,25 +62,61 @@ export function CartProvider({ children }) {
   };
 
   const toggleFavorite = async (productId) => {
-    if (!user) {
-      alert("Please login to save favorites.");
-      return;
-    }
-
-    const isFavorite = favorites.includes(productId);
-
     try {
-      if (isFavorite) {
-        await removeFromWishlist(productId);
-        setFavorites((prev) => prev.filter((id) => id !== productId));
-      } else {
-        await addToWishlist(productId);
-        setFavorites((prev) => [...prev, productId]);
+      // Only proceed if user is logged in
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        // For guest users, just toggle locally
+        setFavorites((prev) =>
+          prev.includes(productId)
+            ? prev.filter((id) => id !== productId)
+            : [...prev, productId],
+        );
+        return;
+      }
+
+      // For logged-in users, call the API
+      const response = await toggleWishlist(productId);
+
+      if (response.success) {
+        // Update local favorites from the response
+        const wishlistIds = response.wishlist.map((item) =>
+          typeof item === "object" ? item._id : item,
+        );
+        setFavorites(wishlistIds);
       }
     } catch (error) {
       console.error("Toggle favorite error:", error);
-      alert("Failed to update favorites. Please try again.");
+      // Fallback: toggle locally
+      setFavorites((prev) =>
+        prev.includes(productId)
+          ? prev.filter((id) => id !== productId)
+          : [...prev, productId],
+      );
     }
+  };
+
+  const loadWishlist = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      const response = await getWishlist();
+      if (response.success) {
+        const wishlistIds = response.wishlist.map((item) =>
+          typeof item === "object" ? item._id : item,
+        );
+        setFavorites(wishlistIds);
+      }
+    } catch (error) {
+      console.error("Load wishlist error:", error);
+    }
+  };
+
+  const value = {
+    // ... existing values
+    toggleFavorite,
+    loadWishlist,
   };
 
   const getTotalItems = () => {
