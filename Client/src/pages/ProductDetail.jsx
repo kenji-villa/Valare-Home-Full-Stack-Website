@@ -641,7 +641,10 @@ export default function ProductDetail() {
                     )}
                   </button>
                   <button
-                    onClick={handleWishlistToggle}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleWishlistToggle();
+                    }}
                     className={`px-6 py-3 rounded-lg border-2 transition-all duration-300 flex items-center justify-center gap-2 ${
                       isWishlist
                         ? "border-[#DA4C2F] bg-[#DA4C2F]/10 text-[#DA4C2F] hover:bg-[#DA4C2F]/20"
