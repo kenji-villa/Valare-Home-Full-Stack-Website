@@ -2,6 +2,7 @@ import { Eye, EyeOff, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { syncFavorites } = useCart();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -129,11 +131,30 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
 
+      // Store authentication data
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("userData", JSON.stringify(data.user));
 
+      // Sync wishlist from backend if available
+      if (data.user && data.user.wishlist) {
+        // If user has wishlist from backend, use it
+        const wishlistIds = data.user.wishlist.map((item) =>
+          typeof item === "object" ? item._id : item,
+        );
+        localStorage.setItem("favorites", JSON.stringify(wishlistIds));
+      } else {
+        // If no wishlist in user data, check if there's a local wishlist
+        const localFavorites = localStorage.getItem("favorites");
+        if (localFavorites) {
+          // If user has local favorites, we might want to sync them to backend
+          // This would require an API call to sync
+          console.log("Local favorites found:", JSON.parse(localFavorites));
+        }
+      }
+
       alert(`Welcome ${data.user.username}!`);
 
+      // Redirect based on role
       if (data.user.role === "admin") {
         window.location.href = "/admin";
       } else {
@@ -144,38 +165,6 @@ export default function LoginPage() {
       setErrors({ submit: error.message || "Login failed. Please try again." });
     } finally {
       setIsLoading(false);
-    }
-    if (data.success) {
-      // Store auth data
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("userData", JSON.stringify(data.user));
-
-      // Load wishlist from server
-      try {
-        const wishlistResponse = await fetch(
-          "http://localhost:3001/api/auth/wishlist",
-          {
-            headers: {
-              Authorization: `Bearer ${data.token}`,
-            },
-          },
-        );
-        const wishlistData = await wishlistResponse.json();
-        if (wishlistData.success) {
-          const wishlistIds = wishlistData.wishlist.map((item) =>
-            typeof item === "object" ? item._id : item,
-          );
-          localStorage.setItem("favorites", JSON.stringify(wishlistIds));
-          // Trigger update
-          window.dispatchEvent(
-            new CustomEvent("wishlistUpdated", {
-              detail: { wishlist: wishlistIds },
-            }),
-          );
-        }
-      } catch (error) {
-        console.error("Error loading wishlist after login:", error);
-      }
     }
   };
 

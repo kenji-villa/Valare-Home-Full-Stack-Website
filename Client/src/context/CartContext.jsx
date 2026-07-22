@@ -19,6 +19,7 @@ export function CartProvider({ children }) {
       try {
         const parsed = JSON.parse(savedFavorites);
         setFavorites(Array.isArray(parsed) ? parsed : []);
+        console.log("Loaded favorites from localStorage:", parsed);
       } catch (e) {
         console.error("Error loading favorites:", e);
         setFavorites([]);
@@ -26,26 +27,10 @@ export function CartProvider({ children }) {
     }
   }, []);
 
-  // Listen for wishlist updates from AuthContext
-  useEffect(() => {
-    const handleWishlistUpdate = (event) => {
-      if (event.detail && event.detail.wishlist) {
-        setFavorites(event.detail.wishlist);
-        localStorage.setItem(
-          "favorites",
-          JSON.stringify(event.detail.wishlist),
-        );
-      }
-    };
-
-    window.addEventListener("wishlistUpdated", handleWishlistUpdate);
-    return () =>
-      window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
-  }, []);
-
   // Save favorites to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("favorites", JSON.stringify(favorites));
+    console.log("Favorites saved to localStorage:", favorites);
   }, [favorites]);
 
   const addToCart = (product) => {
@@ -90,31 +75,31 @@ export function CartProvider({ children }) {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  // Toggle favorite - syncs with database if logged in
-  const toggleFavorite = async (productId) => {
-    const token = localStorage.getItem("authToken");
+  // Toggle favorite - persists to localStorage
+  const toggleFavorite = (productId) => {
+    console.log("Toggling favorite for product:", productId);
+    console.log("Current favorites:", favorites);
 
-    if (token) {
-      // User is logged in - sync with database
-      try {
-        const response = await toggleWishlist(productId);
-        if (response.success) {
-          // Update local state from server response
-          const wishlistIds = response.wishlist.map((item) =>
-            typeof item === "object" ? item._id : item,
-          );
-          setFavorites(wishlistIds);
-          localStorage.setItem("favorites", JSON.stringify(wishlistIds));
-        }
-      } catch (error) {
-        console.error("Toggle wishlist error:", error);
-        // Fallback: toggle locally
-        toggleLocalFavorite(productId);
+    setFavorites((prev) => {
+      const isFavorite = prev.includes(productId);
+      let newFavorites;
+
+      if (isFavorite) {
+        newFavorites = prev.filter((id) => id !== productId);
+        console.log("Removed from favorites:", productId);
+      } else {
+        newFavorites = [...prev, productId];
+        console.log("Added to favorites:", productId);
       }
-    } else {
-      // Guest user - local only
-      toggleLocalFavorite(productId);
-    }
+
+      // Save to localStorage
+      localStorage.setItem("favorites", JSON.stringify(newFavorites));
+      console.log("New favorites saved:", newFavorites);
+
+      return newFavorites;
+      console.log("Toggle favorite called for:", productId);
+      console.log("Current favorites before toggle:", favorites);
+    });
   };
 
   // Local toggle (for guest users or fallback)

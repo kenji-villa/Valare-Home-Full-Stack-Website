@@ -20,17 +20,19 @@ export default function Favorites() {
         setLoading(true);
         setError(null);
 
-        // Get all products
+        if (favorites.length === 0) {
+          setFavoriteProducts([]);
+          setLoading(false);
+          return;
+        }
+
         const response = await getProducts({ limit: 100 });
 
         if (response.success) {
-          // Filter products that are in favorites
           const filtered = response.products.filter(
             (p) => favorites.includes(p._id) || favorites.includes(p.id),
           );
           setFavoriteProducts(filtered);
-        } else {
-          setError("Failed to load favorite products");
         }
       } catch (err) {
         console.error("Error fetching favorite products:", err);
@@ -44,7 +46,7 @@ export default function Favorites() {
   }, [favorites]);
 
   const handleRemoveFromWishlist = (productId) => {
-    // Use toggleFavorite from context (it handles both add and remove)
+    console.log("Removing from wishlist:", productId);
     toggleFavorite(productId);
   };
 

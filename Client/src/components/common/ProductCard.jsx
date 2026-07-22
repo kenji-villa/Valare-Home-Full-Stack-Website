@@ -136,6 +136,8 @@ export default function ProductCard({
     e.preventDefault();
     e.stopPropagation();
     toggleFavorite(productId);
+    console.log("ProductCard - Toggling favorite for:", productId);
+    console.log("Current isFavorite:", isFavorite);
   };
 
   const handleCompare = (e) => {
@@ -186,11 +188,7 @@ export default function ProductCard({
             <ShoppingBag className="w-5 h-5" />
           </button>
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleFavorite(productId);
-            }}
+            onClick={handleToggleFavorite}
             className={`action-btn ${isFavorite ? "active" : ""}`}
             aria-label="Add to wishlist"
           >

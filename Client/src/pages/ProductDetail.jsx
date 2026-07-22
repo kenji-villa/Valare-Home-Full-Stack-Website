@@ -36,7 +36,7 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState("");
   const [activeTab, setActiveTab] = useState("description");
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [isWishlist, setIsWishlist] = useState(false);
+  const isWishlist = favorites.includes(product._id);
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const [mainImage, setMainImage] = useState("");
   const [thumbnails, setThumbnails] = useState([]);
@@ -163,7 +163,7 @@ export default function ProductDetail() {
   const handleWishlistToggle = () => {
     if (product) {
       toggleFavorite(product._id);
-      setIsWishlist(!isWishlist);
+      // The isWishlist will update automatically via the favorites state
     }
   };
 
