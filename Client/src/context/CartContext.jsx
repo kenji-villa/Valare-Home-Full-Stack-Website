@@ -1,10 +1,40 @@
-import { createContext, useState, useContext } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
+import {
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+} from "../services/authService";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [user, setUser] = useState(null);
+
+  // Load wishlist from API when user logs in
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    const userData = localStorage.getItem("userData");
+
+    if (token && userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      loadWishlist();
+    }
+  }, []);
+
+  const loadWishlist = async () => {
+    try {
+      const response = await getWishlist();
+      if (response.success) {
+        const wishlistIds = response.wishlist.map((p) => p._id);
+        setFavorites(wishlistIds);
+      }
+    } catch (error) {
+      console.error("Error loading wishlist:", error);
+    }
+  };
 
   const addToCart = (product) => {
     setCartItems((prev) => {
@@ -45,12 +75,22 @@ export function CartProvider({ children }) {
     }, 0);
   };
 
-  const toggleFavorite = (productId) => {
-    setFavorites((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId],
-    );
+  const toggleFavorite = async (productId) => {
+    try {
+      const isFavorite = favorites.includes(productId);
+
+      if (isFavorite) {
+        await removeFromWishlist(productId);
+        setFavorites((prev) => prev.filter((id) => id !== productId));
+      } else {
+        await addToWishlist(productId);
+        setFavorites((prev) => [...prev, productId]);
+      }
+    } catch (error) {
+      console.error("Toggle wishlist error:", error);
+      // Revert UI state if API call fails
+      // You might want to show an error message here
+    }
   };
 
   const getTotalItems = () => {
@@ -68,6 +108,7 @@ export function CartProvider({ children }) {
         getCartTotal,
         toggleFavorite,
         getTotalItems,
+        loadWishlist,
       }}
     >
       {children}

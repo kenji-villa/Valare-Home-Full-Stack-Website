@@ -164,6 +164,126 @@ const getMe = async (req, res) => {
   }
 };
 
+// @desc    Get user's wishlist
+// @route   GET /api/auth/wishlist
+// @access  Private
+const getWishlist = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .populate({
+        path: 'wishlist',
+        select: 'name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock color material'
+      });
+    
+    res.json({
+      success: true,
+      wishlist: user.wishlist || []
+    });
+  } catch (error) {
+    console.error('Get wishlist error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get wishlist',
+      error: error.message
+    });
+  }
+};
+
+
+// @desc    Add product to wishlist
+// @route   POST /api/auth/wishlist/:productId
+// @access  Private
+const addToWishlist = async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const userId = req.user._id;
+    
+    // Check if product exists
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Check if already in wishlist
+    const user = await User.findById(userId);
+    if (user.wishlist.includes(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product already in wishlist'
+      });
+    }
+    
+    // Add to wishlist
+    user.wishlist.push(productId);
+    await user.save();
+    
+    // Populate wishlist
+    await user.populate({
+      path: 'wishlist',
+      select: 'name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock'
+    });
+    
+    res.json({
+      success: true,
+      message: 'Product added to wishlist',
+      wishlist: user.wishlist
+    });
+  } catch (error) {
+    console.error('Add to wishlist error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add to wishlist',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Remove product from wishlist
+// @route   DELETE /api/auth/wishlist/:productId
+// @access  Private
+const removeFromWishlist = async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const userId = req.user._id;
+    
+    const user = await User.findById(userId);
+    
+    // Check if in wishlist
+    if (!user.wishlist.includes(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product not in wishlist'
+      });
+    }
+    
+    // Remove from wishlist
+    user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+    await user.save();
+    
+    // Populate wishlist
+    await user.populate({
+      path: 'wishlist',
+      select: 'name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock'
+    });
+    
+    res.json({
+      success: true,
+      message: 'Product removed from wishlist',
+      wishlist: user.wishlist
+    });
+  } catch (error) {
+    console.error('Remove from wishlist error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove from wishlist',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
@@ -291,5 +411,8 @@ module.exports = {
   updateProfile,
   changePassword,
   logout,
-  createAdmin
+  createAdmin,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist
 };

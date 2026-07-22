@@ -49,4 +49,10 @@ router.post('/logout', authenticateUser, authController.logout);
 // Admin only routes
 router.post('/create-admin', authenticateUser, authorizeAdmin, authController.createAdmin);
 
+
+// Wishlist routes
+router.get('/wishlist', authenticateUser, authController.getWishlist);
+router.post('/wishlist/:productId', authenticateUser, authController.addToWishlist);
+router.delete('/wishlist/:productId', authenticateUser, authController.removeFromWishlist);
+
 module.exports = router;
