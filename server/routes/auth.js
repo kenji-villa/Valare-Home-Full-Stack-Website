@@ -51,6 +51,7 @@ router.get('/wishlist', authenticateUser, authController.getWishlist);
 router.post('/wishlist/add', authenticateUser, authController.addToWishlist);
 router.delete('/wishlist/remove', authenticateUser, authController.removeFromWishlist);
 router.post('/wishlist/toggle', authenticateUser, authController.toggleWishlist);
+router.delete('/wishlist/clear', authenticateUser, authController.clearWishlist);
 
 
 // Admin only routes

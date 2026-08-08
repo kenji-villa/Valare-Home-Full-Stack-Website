@@ -437,6 +437,32 @@ const getWishlist = async (req, res) => {
 };
 
 
+// @desc    Clear entire wishlist in a single atomic operation
+// @route   DELETE /api/auth/wishlist/clear
+// @access  Private
+const clearWishlist = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { wishlist: [] } },
+      { new: true }
+    );
+ 
+    res.json({
+      success: true,
+      message: 'Wishlist cleared successfully',
+      wishlist: user.wishlist
+    });
+  } catch (error) {
+    console.error('Clear wishlist error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to clear wishlist',
+      error: error.message
+    });
+  }
+};
+
 
 module.exports = {
   register,
@@ -449,5 +475,6 @@ module.exports = {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
-  toggleWishlist
+  toggleWishlist,
+  clearWishlist,
 };
