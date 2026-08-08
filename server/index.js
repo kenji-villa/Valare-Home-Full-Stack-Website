@@ -5,6 +5,7 @@ const mongoose = require('mongoose')
 const path = require('path');
 const connectDB = require('./db/connect');
 const authRoutes = require('./routes/auth');
+const authCart = require ('./routes/cart')
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const notFound = require('./middlewares/notFound');
@@ -32,6 +33,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/cart', authCart);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 
