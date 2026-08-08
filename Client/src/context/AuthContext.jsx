@@ -11,21 +11,26 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("authToken");
-    const storedUser = localStorage.getItem("userData");
+    const initializeAuth = async () => {
+      const storedToken = localStorage.getItem("authToken");
+      const storedUser = localStorage.getItem("userData");
 
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setToken(storedToken);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userData");
+      if (storedToken && storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setToken(storedToken);
+          setUser(parsedUser);
+          await loadUserWishlist(storedToken);
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("userData");
+        }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (userData, authToken) => {

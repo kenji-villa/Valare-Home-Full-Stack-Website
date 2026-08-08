@@ -98,6 +98,18 @@ export const removeFromWishlist = async (productId) => {
   }
 };
 
+// Clear entire wishlist 
+export const clearWishlist = async () => {
+  try {
+    return await fetchWithAuth(`${API_BASE_URL}/auth/wishlist/clear`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    console.error('Clear wishlist error:', error);
+    throw error;
+  }
+};
+
 // Sync local wishlist with server
 export const syncWishlist = async (localWishlist) => {
   try {

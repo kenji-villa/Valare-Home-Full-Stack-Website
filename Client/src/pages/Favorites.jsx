@@ -8,7 +8,7 @@ import { useCart } from "../context/CartContext";
 import { getProducts } from "../services/productService";
 
 export default function Favorites() {
-  const { favorites, toggleFavorite } = useCart();
+  const { favorites, toggleFavorite, clearFavorites } = useCart();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,9 +52,7 @@ export default function Favorites() {
 
   const clearAllFavorites = () => {
     if (window.confirm("Remove all items from favorites?")) {
-      favoriteProducts.forEach((product) => {
-        toggleFavorite(product._id || product.id);
-      });
+      clearFavorites();
     }
   };
 

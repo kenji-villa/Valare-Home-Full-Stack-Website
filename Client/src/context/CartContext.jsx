@@ -3,6 +3,7 @@ import {
   toggleWishlist,
   getWishlist,
   syncWishlist,
+  clearWishlist,
 } from "../services/authService";
 
 const CartContext = createContext();
@@ -143,9 +144,25 @@ export function CartProvider({ children }) {
   };
 
   // Clear all favorites
-  const clearFavorites = () => {
+  const clearFavorites = async () => {
+    const previousFavorites = favorites;
+    const token = localStorage.getItem("authToken");
+
+    // Optimistic UI update
     setFavorites([]);
-    localStorage.removeItem("favorites");
+
+    if (!token) return; // guest user - local only
+
+    try {
+      const response = await clearWishlist();
+      if (!response.success) {
+        throw new Error(response.message || "Failed to clear wishlist");
+      }
+    } catch (error) {
+      console.error("Error clearing favorites on server:", error);
+      // Revert on failure
+      setFavorites(previousFavorites);
+    }
   };
 
   // Sync favorites with server (used after login)
