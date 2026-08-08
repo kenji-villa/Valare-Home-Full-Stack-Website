@@ -38,6 +38,9 @@ const fetchWithAuth = async (url, options = {}) => {
   }
 };
 
+
+// ==================== CART ====================
+
 // Get user's wishlist
 export const getWishlist = async () => {
   try {
@@ -122,6 +125,80 @@ export const syncWishlist = async (localWishlist) => {
     });
   } catch (error) {
     console.error('Sync wishlist error:', error);
+    throw error;
+  }
+};
+
+// ==================== CART ====================
+
+// Get user's cart
+export const getCart = async () => {
+  try {
+    return await fetchWithAuth(`${API_BASE_URL}/cart`, {
+      method: 'GET',
+    });
+  } catch (error) {
+    console.error('Get cart error:', error);
+    throw error;
+  }
+};
+
+// Add product to cart 
+export const addToCartAPI = async (productId, quantity = 1) => {
+  try {
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
+    return await fetchWithAuth(`${API_BASE_URL}/cart/add`, {
+      method: 'POST',
+      body: JSON.stringify({ productId, quantity }),
+    });
+  } catch (error) {
+    console.error('Add to cart error:', error);
+    throw error;
+  }
+};
+
+// Set the exact quantity for a product in the cart
+export const updateCartItemAPI = async (productId, quantity) => {
+  try {
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
+    return await fetchWithAuth(`${API_BASE_URL}/cart/update`, {
+      method: 'PUT',
+      body: JSON.stringify({ productId, quantity }),
+    });
+  } catch (error) {
+    console.error('Update cart item error:', error);
+    throw error;
+  }
+};
+
+// Remove a single product from the cart
+export const removeFromCartAPI = async (productId) => {
+  try {
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
+    return await fetchWithAuth(`${API_BASE_URL}/cart/remove`, {
+      method: 'DELETE',
+      body: JSON.stringify({ productId }),
+    });
+  } catch (error) {
+    console.error('Remove from cart error:', error);
+    throw error;
+  }
+};
+
+// Clear the entire cart in one atomic request
+export const clearCartAPI = async () => {
+  try {
+    return await fetchWithAuth(`${API_BASE_URL}/cart/clear`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    console.error('Clear cart error:', error);
     throw error;
   }
 };

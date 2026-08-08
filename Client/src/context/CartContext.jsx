@@ -4,7 +4,46 @@ import {
   getWishlist,
   syncWishlist,
   clearWishlist,
+  getCart,
+  addToCartAPI,
+  updateCartItemAPI,
+  removeFromCartAPI,
+  clearCartAPI,
 } from "../services/authService";
+
+// Convert the server's cart shape ({ product: {...}, quantity }) into the
+// flat shape the Ui uses ({ id, name, price, image, quantity })
+const resolveImageUrl = (path) => {
+  if (!path) return "/assets/images/placeholder.jpg";
+  if (path.startsWith("/uploads")) return `http://localhost:3001${path}`;
+  return path;
+};
+
+const mapServerCartToLocal = (serverCart) => {
+  return (serverCart || [])
+    .filter((item) => item.product)
+    .map((item) => {
+      const product = item.product;
+      let price = product.price;
+      if (typeof price === "number") {
+        price = `ETB ${price.toFixed(2)}`;
+      } else if (typeof price === "string" && !price.startsWith("ETB")) {
+        price = `ETB ${price}`;
+      }
+      const rawImage =
+        product.coverImage ||
+        product.image ||
+        (product.images && product.images[0]) ||
+        "";
+      return {
+        id: product._id || product.id,
+        name: product.name,
+        price,
+        image: resolveImageUrl(rawImage),
+        quantity: item.quantity,
+      };
+    });
+};
 
 const CartContext = createContext();
 
@@ -12,6 +51,45 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Load cart from localStorage on mount (guest fallback / instant paint
+  // before the server sync below completes for logged-in users)
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      try {
+        const parsed = JSON.parse(savedCart);
+        setCartItems(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        console.error("Error loading cart:", e);
+        setCartItems([]);
+      }
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  // Sync cart whenever AuthContext loads it from the server (fires after
+  useEffect(() => {
+    const handleCartUpdate = (e) => {
+      setCartItems(mapServerCartToLocal(e.detail?.cart));
+    };
+    window.addEventListener("cartUpdated", handleCartUpdate);
+    return () => window.removeEventListener("cartUpdated", handleCartUpdate);
+  }, []);
+
+  // Reset local state on logout so the next session doesn't inherit
+  useEffect(() => {
+    const handleLogout = () => {
+      setCartItems([]);
+      setFavorites([]);
+    };
+    window.addEventListener("userLoggedOut", handleLogout);
+    return () => window.removeEventListener("userLoggedOut", handleLogout);
+  }, []);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -34,8 +112,7 @@ export function CartProvider({ children }) {
     console.log("Favorites saved to localStorage:", favorites);
   }, [favorites]);
 
-  // Sync favorites whenever AuthContext loads the wishlist from the server
-  // (fires after login, since AuthContext.loadUserWishlist dispatches this)
+  /// Sync favorites whenever AuthContext loads the wishlist from the server
   useEffect(() => {
     const handleWishlistUpdate = (e) => {
       setFavorites(e.detail?.wishlist || []);
@@ -45,7 +122,9 @@ export function CartProvider({ children }) {
       window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
   }, []);
 
-  const addToCart = (product) => {
+  const addToCart = async (product) => {
+    const token = localStorage.getItem("authToken");
+
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -57,22 +136,103 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-  };
 
-  const removeFromCart = (productId) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== productId));
-  };
+    if (!token) return; // guest user - local only
 
-  const updateQuantity = (productId, quantity) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-      return;
+    try {
+      const response = await addToCartAPI(product.id, 1);
+      if (!response.success) {
+        throw new Error(response.message || "Failed to add to cart");
+      }
+      if (response.cart) {
+        setCartItems(mapServerCartToLocal(response.cart));
+      }
+    } catch (error) {
+      console.error("Error adding to cart on server:", error);
+      setCartItems((prev) => {
+        const existing = prev.find((item) => item.id === product.id);
+        if (existing && existing.quantity > 1) {
+          return prev.map((item) =>
+            item.id === product.id
+              ? { ...item, quantity: item.quantity - 1 }
+              : item,
+          );
+        }
+        return prev.filter((item) => item.id !== product.id);
+      });
     }
+  };
+
+  const removeFromCart = async (productId) => {
+    const previousCart = cartItems;
+    const token = localStorage.getItem("authToken");
+
+    setCartItems((prev) => prev.filter((item) => item.id !== productId));
+
+    if (!token) return;
+
+    try {
+      const response = await removeFromCartAPI(productId);
+      if (!response.success) {
+        throw new Error(response.message || "Failed to remove from cart");
+      }
+      if (response.cart) {
+        setCartItems(mapServerCartToLocal(response.cart));
+      }
+    } catch (error) {
+      console.error("Error removing from cart on server:", error);
+      setCartItems(previousCart);
+    }
+  };
+
+  const updateQuantity = async (productId, quantity) => {
+    if (quantity <= 0) {
+      return removeFromCart(productId);
+    }
+
+    const previousCart = cartItems;
+    const token = localStorage.getItem("authToken");
+
     setCartItems((prev) =>
       prev.map((item) =>
         item.id === productId ? { ...item, quantity } : item,
       ),
     );
+
+    if (!token) return;
+
+    try {
+      const response = await updateCartItemAPI(productId, quantity);
+      if (!response.success) {
+        throw new Error(response.message || "Failed to update cart");
+      }
+      if (response.cart) {
+        setCartItems(mapServerCartToLocal(response.cart));
+      }
+    } catch (error) {
+      console.error("Error updating cart on server:", error);
+      setCartItems(previousCart);
+    }
+  };
+
+  // Clear the entire cart
+  const clearCart = async () => {
+    const previousCart = cartItems;
+    const token = localStorage.getItem("authToken");
+
+    setCartItems([]);
+
+    if (!token) return;
+
+    try {
+      const response = await clearCartAPI();
+      if (!response.success) {
+        throw new Error(response.message || "Failed to clear cart");
+      }
+    } catch (error) {
+      console.error("Error clearing cart on server:", error);
+      setCartItems(previousCart);
+    }
   };
 
   const getCartTotal = () => {
@@ -191,6 +351,7 @@ export function CartProvider({ children }) {
     addToCart,
     removeFromCart,
     updateQuantity,
+    clearCart,
     getCartTotal,
     getTotalItems,
     toggleFavorite,

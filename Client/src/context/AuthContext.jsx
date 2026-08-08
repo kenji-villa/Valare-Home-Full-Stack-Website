@@ -56,6 +56,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
     localStorage.removeItem("favorites");
+    localStorage.removeItem("cart");
+    window.dispatchEvent(new CustomEvent("userLoggedOut"));
     navigate("/login");
   };
 
@@ -84,6 +86,25 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loadUserCart = async (authToken) => {
+    try {
+      const tokenToUse = authToken || localStorage.getItem("authToken");
+      if (!tokenToUse) return;
+
+      const response = await getCart();
+      if (response.success && response.cart) {
+        // Trigger a custom event so CartContext can update
+        window.dispatchEvent(
+          new CustomEvent("cartUpdated", {
+            detail: { cart: response.cart },
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("Error loading cart:", error);
+    }
+  };
+
   const isAdmin = user?.role === "admin";
   const isCustomer = user?.role === "customer";
 
@@ -96,6 +117,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         loadUserWishlist,
+        loadUserCart,
         isAdmin,
         isCustomer,
       }}

@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useCart } from "../../context/CartContext";
-import { ShoppingBag, Star, Repeat, Heart } from "lucide-react";
+import { ShoppingBag, Star, Repeat, Heart, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
@@ -24,6 +25,7 @@ export default function ProductCard({
   const { addToCart, toggleFavorite, favorites } = useCart();
   const navigate = useNavigate();
   const isFavorite = favorites.includes(id);
+  const [isAdding, setIsAdding] = useState(false);
 
   // Use the correct ID
   const productId = _id || id;
@@ -130,6 +132,8 @@ export default function ProductCard({
       price: productPrice,
       image: productImage,
     });
+    setIsAdding(true);
+    setTimeout(() => setIsAdding(false), 1500);
   };
 
   const handleToggleFavorite = (e) => {
@@ -176,8 +180,17 @@ export default function ProductCard({
             onClick={handleAddToCart}
             className="action-btn"
             aria-label="Add to cart"
+            style={
+              isAdding
+                ? { backgroundColor: "#16a34a", color: "#fff" }
+                : undefined
+            }
           >
-            <ShoppingBag className="w-5 h-5" />
+            {isAdding ? (
+              <Check className="w-5 h-5" />
+            ) : (
+              <ShoppingBag className="w-5 h-5" />
+            )}
           </button>
           <button
             onClick={handleToggleFavorite}
