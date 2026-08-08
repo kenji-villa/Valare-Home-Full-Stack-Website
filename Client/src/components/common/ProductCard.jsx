@@ -173,15 +173,7 @@ export default function ProductCard({
         {/* Action buttons - slide from right */}
         <div className="product-actions">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              addToCart({
-                id: productId,
-                name,
-                price,
-                image,
-              });
-            }}
+            onClick={handleAddToCart}
             className="action-btn"
             aria-label="Add to cart"
           >
