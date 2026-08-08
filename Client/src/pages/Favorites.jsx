@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
@@ -10,6 +10,7 @@ import { getProducts } from "../services/productService";
 export default function Favorites() {
   const { favorites, toggleFavorite, clearFavorites } = useCart();
   const [favoriteProducts, setFavoriteProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -137,30 +138,6 @@ export default function Favorites() {
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Recommendations */}
-          {favoriteProducts.length > 0 && (
-            <div className="mt-12 bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-[#1a2d5e] mb-4">
-                You Might Also Like
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((id) => (
-                  <div
-                    key={id}
-                    className="bg-gray-50 rounded-lg p-4 text-center"
-                  >
-                    <div className="w-full h-40 bg-gray-200 rounded-lg mb-3"></div>
-                    <h4 className="font-medium text-gray-800">Product Name</h4>
-                    <p className="text-[#DA4C2F] font-bold">ETB 45,000</p>
-                    <button className="mt-2 text-sm text-[#DA4C2F] font-medium hover:underline">
-                      View Product
-                    </button>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
