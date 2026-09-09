@@ -9,6 +9,7 @@ import Collections from "../components/home/Collections";
 import Banner from "../components/home/Banner";
 import Features from "../components/home/Features";
 import Blog from "../components/home/Blog";
+
 import {
   getProducts,
   getFeaturedProducts,
