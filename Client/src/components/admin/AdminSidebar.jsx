@@ -6,10 +6,12 @@ import {
   Settings,
   ChevronUp,
   ChevronDown,
+  TrendingUp,
 } from "lucide-react";
 
 const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { id: "analytics", icon: TrendingUp, label: "Analytics" },
   { id: "products", icon: Package, label: "Products" },
   { id: "orders", icon: ShoppingCart, label: "Orders" },
   { id: "customers", icon: Users, label: "Customers" },

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import AdminHeader from "../components/admin/AdminHeader";
 import Dashboard from "../components/admin/Dashboard/Dashboard";
+import Analytics from "../components/admin/Analytics/Analytics";
 import Products from "../components/admin/Products/Products";
 import Orders from "../components/admin/Orders/Orders";
 import Customers from "../components/admin/Customers/Customers";
@@ -94,6 +95,8 @@ export default function Admin() {
     switch (activeTab) {
       case "dashboard":
         return <Dashboard orders={orders} products={products} />;
+      case "analytics": // Add this case
+        return <Analytics />;
       case "products":
         return (
           <Products
