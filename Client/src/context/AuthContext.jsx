@@ -1,6 +1,11 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getWishlist } from "../services/authService";
+import {
+  getWishlist,
+  getCart,
+  addToCartAPI,
+  addToWishlist,
+} from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -11,26 +16,26 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const storedToken = localStorage.getItem("authToken");
-      const storedUser = localStorage.getItem("userData");
+    const storedToken = localStorage.getItem("authToken");
+    const storedUser = localStorage.getItem("userData");
 
-      if (storedToken && storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setToken(storedToken);
-          setUser(parsedUser);
-          await loadUserWishlist(storedToken);
-        } catch (error) {
-          console.error("Error parsing user data:", error);
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("userData");
-        }
+    if (storedToken && storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setToken(storedToken);
+        setUser(parsedUser);
+
+        // Refresh wishlist/cart from the server so a page reload reflects
+        // the database, not just whatever was last cached locally
+        loadUserWishlist(storedToken);
+        loadUserCart(storedToken);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
       }
-      setIsLoading(false);
-    };
-
-    initializeAuth();
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (userData, authToken) => {
@@ -39,14 +44,61 @@ export function AuthProvider({ children }) {
     localStorage.setItem("authToken", authToken);
     localStorage.setItem("userData", JSON.stringify(userData));
 
-    // Load wishlist from database after login
+    // Merge anything added as a guest into the account's server data
+    // BEFORE pulling down the server's copy - otherwise the (empty, for
+    // a first-time cart/wishlist) server response would overwrite and
+    // permanently erase what was added pre-login
+    await mergeGuestCartIntoAccount();
+    await mergeGuestWishlistIntoAccount();
+
+    // Load wishlist and cart from database after login
     await loadUserWishlist(authToken);
+    await loadUserCart(authToken);
 
     // Redirect based on role
     if (userData.role === "admin") {
       navigate("/admin");
     } else {
       navigate("/");
+    }
+  };
+
+  const mergeGuestCartIntoAccount = async () => {
+    try {
+      const guestCartRaw = localStorage.getItem("cart");
+      if (!guestCartRaw) return;
+
+      const guestCart = JSON.parse(guestCartRaw);
+      if (!Array.isArray(guestCart) || guestCart.length === 0) return;
+
+      for (const item of guestCart) {
+        if (!item?.id) continue;
+        try {
+          await addToCartAPI(item.id, item.quantity || 1);
+        } catch (err) {
+          console.error("Error merging cart item:", item.id, err);
+        }
+      }
+    } catch (error) {
+      console.error("Error merging guest cart:", error);
+    }
+  };
+
+  const mergeGuestWishlistIntoAccount = async () => {
+    try {
+      const guestWishlistRaw = localStorage.getItem("favorites");
+      if (!guestWishlistRaw) return;
+
+      const guestWishlist = JSON.parse(guestWishlistRaw);
+      if (!Array.isArray(guestWishlist) || guestWishlist.length === 0) return;
+
+      for (const productId of guestWishlist) {
+        try {
+          await addToWishlist(productId);
+        } catch (err) {}
+      }
+    } catch (error) {
+      console.error("Error merging guest wishlist:", error);
     }
   };
 
@@ -57,6 +109,9 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("userData");
     localStorage.removeItem("favorites");
     localStorage.removeItem("cart");
+    // Tell CartContext to reset its in-memory state too, so the next
+    // guest session (or a different account) doesn't inherit this
+    // user's favorites/cart until a full page reload happens
     window.dispatchEvent(new CustomEvent("userLoggedOut"));
     navigate("/login");
   };

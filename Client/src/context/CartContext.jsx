@@ -12,7 +12,7 @@ import {
 } from "../services/authService";
 
 // Convert the server's cart shape ({ product: {...}, quantity }) into the
-// flat shape the Ui uses ({ id, name, price, image, quantity })
+// flat shape the UI uses ({ id, name, price, image, quantity })
 const resolveImageUrl = (path) => {
   if (!path) return "/assets/images/placeholder.jpg";
   if (path.startsWith("/uploads")) return `http://localhost:3001${path}`;
@@ -47,25 +47,27 @@ const mapServerCartToLocal = (serverCart) => {
 
 const CartContext = createContext();
 
-export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
-  const [favorites, setFavorites] = useState([]);
-  const [loading, setLoading] = useState(false);
+// Read a JSON array out of localStorage synchronously, used as the initial
+// React state so there's no gap where an empty [] could get saved back
+// over real data before the async load effect finishes
+const readStoredArray = (key) => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error(`Error loading ${key} from localStorage:`, e);
+    return [];
+  }
+};
 
-  // Load cart from localStorage on mount (guest fallback / instant paint
-  // before the server sync below completes for logged-in users)
-  useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart);
-        setCartItems(Array.isArray(parsed) ? parsed : []);
-      } catch (e) {
-        console.error("Error loading cart:", e);
-        setCartItems([]);
-      }
-    }
-  }, []);
+export function CartProvider({ children }) {
+  const [cartItems, setCartItems] = useState(() => readStoredArray("cart"));
+  const [favorites, setFavorites] = useState(() =>
+    readStoredArray("favorites"),
+  );
+  const [loading, setLoading] = useState(false);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -73,6 +75,7 @@ export function CartProvider({ children }) {
   }, [cartItems]);
 
   // Sync cart whenever AuthContext loads it from the server (fires after
+  // login, since AuthContext.loadUserCart dispatches this)
   useEffect(() => {
     const handleCartUpdate = (e) => {
       setCartItems(mapServerCartToLocal(e.detail?.cart));
@@ -82,6 +85,7 @@ export function CartProvider({ children }) {
   }, []);
 
   // Reset local state on logout so the next session doesn't inherit
+  // this user's cart/favorites until a full reload
   useEffect(() => {
     const handleLogout = () => {
       setCartItems([]);
@@ -91,28 +95,13 @@ export function CartProvider({ children }) {
     return () => window.removeEventListener("userLoggedOut", handleLogout);
   }, []);
 
-  // Load favorites from localStorage on mount
-  useEffect(() => {
-    const savedFavorites = localStorage.getItem("favorites");
-    if (savedFavorites) {
-      try {
-        const parsed = JSON.parse(savedFavorites);
-        setFavorites(Array.isArray(parsed) ? parsed : []);
-        console.log("Loaded favorites from localStorage:", parsed);
-      } catch (e) {
-        console.error("Error loading favorites:", e);
-        setFavorites([]);
-      }
-    }
-  }, []);
-
   // Save favorites to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("favorites", JSON.stringify(favorites));
-    console.log("Favorites saved to localStorage:", favorites);
   }, [favorites]);
 
-  /// Sync favorites whenever AuthContext loads the wishlist from the server
+  // Sync favorites whenever AuthContext loads the wishlist from the server
+  // (fires after login, since AuthContext.loadUserWishlist dispatches this)
   useEffect(() => {
     const handleWishlistUpdate = (e) => {
       setFavorites(e.detail?.wishlist || []);
@@ -125,6 +114,7 @@ export function CartProvider({ children }) {
   const addToCart = async (product) => {
     const token = localStorage.getItem("authToken");
 
+    // Optimistic UI update
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
@@ -149,6 +139,7 @@ export function CartProvider({ children }) {
       }
     } catch (error) {
       console.error("Error adding to cart on server:", error);
+      // Revert the optimistic update
       setCartItems((prev) => {
         const existing = prev.find((item) => item.id === product.id);
         if (existing && existing.quantity > 1) {
@@ -215,7 +206,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  // Clear the entire cart
+  // Clear the entire cart (e.g. after checkout) - one atomic server request
   const clearCart = async () => {
     const previousCart = cartItems;
     const token = localStorage.getItem("authToken");
@@ -303,7 +294,8 @@ export function CartProvider({ children }) {
     return favorites.includes(productId);
   };
 
-  // Clear all favorites
+  // Clear all favorites - one atomic request to the server, so there's
+  // no race between multiple concurrent toggle/remove calls
   const clearFavorites = async () => {
     const previousFavorites = favorites;
     const token = localStorage.getItem("authToken");
