@@ -7,6 +7,23 @@ export default function OrderTable({
   onDelete,
   darkMode,
 }) {
+  const getItemCount = (order) => {
+    if (Array.isArray(order.items)) {
+      return order.items.length;
+    }
+    return order.items || 0;
+  };
+
+  const getCustomerName = (order) => {
+    if (order.shippingAddress?.fullName) {
+      return order.shippingAddress.fullName;
+    }
+    if (order.customer) {
+      return order.customer;
+    }
+    return "Anonymous";
+  };
+
   return (
     <div
       className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white"} rounded-lg shadow-sm border overflow-hidden`}
@@ -33,6 +50,11 @@ export default function OrderTable({
               <th
                 className={`text-left text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider px-6 py-3`}
               >
+                Items
+              </th>
+              <th
+                className={`text-left text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-500"} uppercase tracking-wider px-6 py-3`}
+              >
                 Total
               </th>
               <th
@@ -52,33 +74,40 @@ export default function OrderTable({
           >
             {orders.map((order) => (
               <tr
-                key={order.id}
+                key={order._id || order.id}
                 className={`${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"} transition-colors`}
               >
                 <td className="px-6 py-4">
                   <span
                     className={`font-medium text-sm ${darkMode ? "text-white" : "text-gray-800"}`}
                   >
-                    {order.id}
+                    {order.orderNumber || order.id}
                   </span>
                 </td>
                 <td
                   className={`px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
                 >
-                  {order.customer}
+                  {getCustomerName(order)}
                 </td>
                 <td
                   className={`px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
                 >
-                  {order.date}
+                  {new Date(order.createdAt).toLocaleDateString()}
+                </td>
+                <td
+                  className={`px-6 py-4 text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}
+                >
+                  {getItemCount(order)}
                 </td>
                 <td className="px-6 py-4 text-sm font-semibold text-[#DA4C2F]">
-                  ETB {order.total?.toFixed(2) || order.total}
+                  ETB {(order.total || order.subtotal || 0).toFixed(2)}
                 </td>
                 <td className="px-6 py-4">
                   <select
-                    value={order.status}
-                    onChange={(e) => onUpdateStatus(order.id, e.target.value)}
+                    value={order.status || order.orderStatus || "Pending"}
+                    onChange={(e) =>
+                      onUpdateStatus(order._id || order.id, e.target.value)
+                    }
                     className="px-2 py-1 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-[#DA4C2F]"
                   >
                     <option value="Pending">Pending</option>
@@ -94,7 +123,7 @@ export default function OrderTable({
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => onDelete(order.id)}
+                      onClick={() => onDelete(order._id || order.id)}
                       className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />

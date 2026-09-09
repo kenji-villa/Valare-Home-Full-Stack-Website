@@ -25,6 +25,25 @@ function timeAgo(dateString) {
 }
 
 export default function RecentOrders({ orders }) {
+  // Get the number of items from the items array
+  const getItemCount = (order) => {
+    if (Array.isArray(order.items)) {
+      return order.items.length;
+    }
+    return order.items || 0;
+  };
+
+  // Get customer name from shippingAddress or order fields
+  const getCustomerName = (order) => {
+    if (order.shippingAddress?.fullName) {
+      return order.shippingAddress.fullName;
+    }
+    if (order.customer) {
+      return order.customer;
+    }
+    return "Anonymous";
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -44,10 +63,12 @@ export default function RecentOrders({ orders }) {
           const statusColor =
             statusConfig[order.status]?.color || "text-gray-400";
           const statusBg = statusConfig[order.status]?.bg || "bg-gray-50";
+          const itemCount = getItemCount(order);
+          const customerName = getCustomerName(order);
 
           return (
             <div
-              key={order.id}
+              key={order._id || order.id}
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
             >
               <div
@@ -58,21 +79,21 @@ export default function RecentOrders({ orders }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm text-gray-800 truncate">
-                    {order.id}
+                    {order.orderNumber || order.id}
                   </p>
                   <span
                     className={`text-xs px-1.5 py-0.5 rounded-full ${statusBg} ${statusColor} font-medium`}
                   >
-                    {order.status}
+                    {order.status || order.orderStatus || "Unknown"}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500">
-                  {order.customer} · {order.items} items
+                  {customerName} · {itemCount} items
                   {ago ? ` · ${ago}` : ""}
                 </p>
               </div>
               <span className="text-sm font-semibold text-[#DA4C2F]">
-                ETB {order.total?.toFixed(2) || order.total}
+                ETB {(order.total || order.subtotal || 0).toFixed(2)}
               </span>
             </div>
           );
