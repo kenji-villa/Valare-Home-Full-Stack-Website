@@ -1,9 +1,8 @@
-import { Heart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
-import { LayoutDashboard, User } from "lucide-react";
+import { getProducts } from "../../services/productService";
 import {
   CircleUser,
   Star,
@@ -17,6 +16,8 @@ import {
   Minus,
   Plus,
   Trash2,
+  LayoutDashboard,
+  User,
 } from "lucide-react";
 
 export default function Header() {
@@ -24,7 +25,9 @@ export default function Header() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const { user, logout } = useAuth();
+  const [isSearching, setIsSearching] = useState(false);
   const {
     cartItems,
     getCartTotal,
@@ -35,7 +38,9 @@ export default function Header() {
   } = useCart();
   const dropdownRef = useRef(null);
   const cartRef = useRef(null);
+  const searchRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleNav = () => setIsNavOpen(!isNavOpen);
   const toggleCart = () => setIsCartOpen(!isCartOpen);
@@ -49,10 +54,22 @@ export default function Header() {
       if (cartRef.current && !cartRef.current.contains(event.target)) {
         setIsCartOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Sync search query with URL when on shop pages
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get("search");
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+  }, [location]);
 
   const handleLogout = () => {
     logout();
@@ -64,6 +81,121 @@ export default function Header() {
     setIsUserDropdownOpen(false);
     navigate("/admin");
   };
+
+  // Handle search submission
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setIsSearching(true);
+    setShowSuggestions(false);
+
+    try {
+      // Fetch all products to check which category matches
+      const response = await getProducts({ search: query, limit: 100 });
+
+      if (response.success && response.products.length > 0) {
+        // Check if any Office products match
+        const officeMatch = response.products.some(
+          (p) =>
+            p.category === "Office" ||
+            p.category === "office" ||
+            p.subcategory === "Chairs" ||
+            p.subcategory === "Storage" ||
+            p.subcategory === "Outdoor" ||
+            p.subcategory === "Accessories" ||
+            p.subcategory === "Conference" ||
+            p.subcategory === "Desks",
+        );
+
+        // Check if any Home products match
+        const homeMatch = response.products.some(
+          (p) =>
+            p.category === "Home" ||
+            p.category === "Living Room" ||
+            p.category === "Bedroom" ||
+            p.category === "Dining" ||
+            p.category === "Kids" ||
+            p.subcategory === "Living Room" ||
+            p.subcategory === "Bedroom" ||
+            p.subcategory === "Dining" ||
+            p.subcategory === "Kids",
+        );
+
+        // Route based on which has more matches
+        if (officeMatch && !homeMatch) {
+          // Only Office products match
+          navigate(`/office?search=${encodeURIComponent(query)}`);
+        } else if (homeMatch && !officeMatch) {
+          // Only Home products match
+          navigate(`/home-furniture?search=${encodeURIComponent(query)}`);
+        } else if (officeMatch && homeMatch) {
+          // Both match - count results in each category
+          const officeCount = response.products.filter(
+            (p) =>
+              p.category === "Office" ||
+              p.category === "office" ||
+              p.subcategory === "Chairs" ||
+              p.subcategory === "Storage" ||
+              p.subcategory === "Outdoor" ||
+              p.subcategory === "Accessories" ||
+              p.subcategory === "Conference" ||
+              p.subcategory === "Desks",
+          ).length;
+
+          const homeCount = response.products.length - officeCount;
+
+          // Navigate to the category with more matches
+          if (officeCount > homeCount) {
+            navigate(`/office?search=${encodeURIComponent(query)}`);
+          } else {
+            navigate(`/home-furniture?search=${encodeURIComponent(query)}`);
+          }
+        } else {
+          // No specific category - default to home furniture
+          navigate(`/home-furniture?search=${encodeURIComponent(query)}`);
+        }
+      } else {
+        // No products found - go to home furniture with empty result
+        navigate(`/home-furniture?search=${encodeURIComponent(query)}`);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      // Fallback - go to home furniture
+      navigate(`/home-furniture?search=${encodeURIComponent(query)}`);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    if (e.target.value.length > 0) {
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle key press (Enter)
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSearch(e);
+    }
+  };
+
+  // Popular search suggestions
+  const popularSearches = [
+    "Sofa",
+    "Bed",
+    "Table",
+    "Chair",
+    "Office Desk",
+    "Bookshelf",
+    "Recliner",
+  ];
 
   const navLinks = [
     { path: "/", label: "Home" },
@@ -79,7 +211,6 @@ export default function Header() {
         <div className="flex items-center justify-between py-4">
           {/* Left section: Mobile Menu + Logo */}
           <div className="flex items-center gap-4">
-            {/* Mobile Menu Button */}
             <button
               onClick={toggleNav}
               className="lg:hidden p-2 hover:bg-gray-100 rounded transition-colors"
@@ -88,7 +219,6 @@ export default function Header() {
               <Menu className="w-5 h-5 text-gray-700" />
             </button>
 
-            {/* Logo */}
             <Link to="/" className="flex-shrink-0">
               <img
                 src="/assets/images/Logo_1.png"
@@ -100,18 +230,119 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Center: Search Bar - Hidden on mobile */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8 relative">
-            <input
-              type="search"
-              placeholder="Search product"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded focus:outline-none focus:border-[#DA4C2F] focus:ring-2 focus:ring-[#DA4C2F]/20 transition-all text-sm bg-gray-50"
-            />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#DA4C2F] transition-colors">
-              <Search className="w-4 h-4" />
-            </button>
+          {/* Center: Search Bar - Desktop */}
+          <div
+            className="hidden md:flex flex-1 max-w-xl mx-8 relative"
+            ref={searchRef}
+          >
+            <form onSubmit={handleSearch} className="w-full relative">
+              <input
+                type="search"
+                placeholder="Search product"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() =>
+                  searchQuery.length > 0 && setShowSuggestions(true)
+                }
+                className="w-full px-4 py-2.5 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:border-[#DA4C2F] focus:ring-2 focus:ring-[#DA4C2F]/20 transition-all text-sm bg-gray-50"
+              />
+              <button
+                type="submit"
+                disabled={isSearching}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#DA4C2F] transition-colors disabled:opacity-50"
+                aria-label="Search"
+              >
+                {isSearching ? (
+                  <div className="w-5 h-5 border-2 border-[#DA4C2F] border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+              </button>
+            </form>
+
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                {searchQuery.length > 0 && (
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50"
+                  >
+                    <Search className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-700">
+                      Search for "
+                      <span className="font-medium">{searchQuery}</span>"
+                    </span>
+                    {isSearching && (
+                      <div className="ml-auto w-4 h-4 border-2 border-[#DA4C2F] border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                  </button>
+                )}
+                <div className="p-3">
+                  <p className="text-xs text-gray-400 mb-2 px-1">
+                    Popular searches
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {popularSearches.map((term) => (
+                      <button
+                        key={term}
+                        onClick={async () => {
+                          setSearchQuery(term);
+                          setShowSuggestions(false);
+
+                          try {
+                            const response = await getProducts({
+                              search: term,
+                              limit: 100,
+                            });
+
+                            if (
+                              response.success &&
+                              response.products.length > 0
+                            ) {
+                              const officeMatch = response.products.some(
+                                (p) =>
+                                  p.category === "Office" ||
+                                  p.category === "office" ||
+                                  p.subcategory === "Chairs" ||
+                                  p.subcategory === "Storage" ||
+                                  p.subcategory === "Outdoor" ||
+                                  p.subcategory === "Accessories" ||
+                                  p.subcategory === "Conference" ||
+                                  p.subcategory === "Desks",
+                              );
+
+                              if (officeMatch) {
+                                navigate(
+                                  `/office?search=${encodeURIComponent(term)}`,
+                                );
+                              } else {
+                                navigate(
+                                  `/home-furniture?search=${encodeURIComponent(term)}`,
+                                );
+                              }
+                            } else {
+                              navigate(
+                                `/home-furniture?search=${encodeURIComponent(term)}`,
+                              );
+                            }
+                          } catch (error) {
+                            navigate(
+                              `/home-furniture?search=${encodeURIComponent(term)}`,
+                            );
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-gray-50 hover:bg-[#DA4C2F]/10 hover:text-[#DA4C2F] rounded-full text-xs font-medium text-gray-600 transition-colors"
+                      >
+                        {term}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right section: User Actions */}
@@ -129,7 +360,6 @@ export default function Header() {
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded shadow-lg py-2 z-50 border border-gray-200">
                   {user ? (
                     <>
-                      {/* User Info */}
                       <div className="px-4 py-2 border-b border-gray-100">
                         <p className="font-medium text-gray-800 text-sm">
                           {user.username}
@@ -144,7 +374,6 @@ export default function Header() {
                         )}
                       </div>
 
-                      {/* Admin Dashboard Link - ONLY for admin users */}
                       {user.role === "admin" && (
                         <button
                           onClick={handleAdminNavigate}
@@ -158,7 +387,6 @@ export default function Header() {
                         </button>
                       )}
 
-                      {/* Profile Link */}
                       <button
                         onClick={() => {
                           setIsUserDropdownOpen(false);
@@ -170,7 +398,6 @@ export default function Header() {
                         <span className="text-sm">My Profile</span>
                       </button>
 
-                      {/* Logout */}
                       <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600 transition-colors border-t border-gray-100 mt-1 pt-2"
@@ -208,7 +435,7 @@ export default function Header() {
               to="/favorites"
               className="relative text-gray-600 hover:text-[#DA4C2F] transition-colors"
             >
-              <Heart
+              <Star
                 className="w-5 h-5 md:w-6 md:h-6"
                 fill={favorites.length > 0 ? "#DA4C2F" : "none"}
               />
@@ -238,9 +465,10 @@ export default function Header() {
                 </div>
               </button>
 
-              {/* Cart Dropdown */}
+              {/* Cart Dropdown - Keep as is */}
               {isCartOpen && (
                 <div className="absolute right-0 mt-2 w-72 md:w-96 bg-white rounded shadow-xl z-50 max-h-[500px] flex flex-col border border-gray-200">
+                  {/* ... existing cart content ... */}
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="font-bold text-base md:text-lg text-gray-800">
                       Your Cart
@@ -315,6 +543,7 @@ export default function Header() {
                       <Link
                         to="/checkout"
                         className="w-full bg-[#DA4C2F] text-white py-2.5 md:py-3 rounded font-medium hover:bg-[#c43d22] transition-colors text-sm md:text-base block text-center"
+                        onClick={toggleCart}
                       >
                         Proceed to Checkout
                       </Link>
@@ -328,18 +557,28 @@ export default function Header() {
 
         {/* Mobile Search - Visible only on mobile */}
         <div className="md:hidden pb-3">
-          <div className="relative">
+          <form onSubmit={handleSearch} className="relative">
             <input
               type="search"
               placeholder="Search product"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchChange}
+              onKeyDown={handleKeyDown}
               className="w-full px-4 py-2 pr-10 border border-gray-300 rounded focus:outline-none focus:border-[#DA4C2F] focus:ring-2 focus:ring-[#DA4C2F]/20 transition-all text-sm bg-gray-50"
             />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#DA4C2F] transition-colors">
-              <Search className="w-4 h-4" />
+            <button
+              type="submit"
+              disabled={isSearching}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#DA4C2F] transition-colors disabled:opacity-50"
+              aria-label="Search"
+            >
+              {isSearching ? (
+                <div className="w-4 h-4 border-2 border-[#DA4C2F] border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
             </button>
-          </div>
+          </form>
         </div>
 
         {/* Navigation - Desktop */}
