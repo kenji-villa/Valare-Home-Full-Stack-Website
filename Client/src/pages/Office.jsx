@@ -4,12 +4,14 @@ import Footer from "../components/layout/Footer";
 import ProductCard from "../components/common/ProductCard";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { getProducts } from "../services/productService";
+import { useSearchParams } from "react-router-dom";
 
 export default function Office() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchParams] = useSearchParams();
   const [officeSubcategories, setOfficeSubcategories] = useState([
     "Desks",
     "Chairs",
@@ -33,6 +35,14 @@ export default function Office() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Read search from URL
+  useEffect(() => {
+    const searchFromUrl = searchParams.get("search");
+    if (searchFromUrl) {
+      setFilters((prev) => ({ ...prev, search: searchFromUrl }));
+    }
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     try {
@@ -96,30 +106,45 @@ export default function Office() {
   };
 
   useEffect(() => {
-    applyFilters();
+    if (products.length > 0) {
+      applyFilters();
+    }
   }, [filters, sortBy, products]);
 
   const applyFilters = () => {
     let filtered = [...products];
 
-    if (filters.search) {
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          (p.subCategory || p.category)
-            .toLowerCase()
-            .includes(filters.search.toLowerCase()),
-      );
+    if (filters.search && filters.search.trim()) {
+      const searchLower = filters.search.toLowerCase().trim();
+      filtered = filtered.filter((p) => {
+        const nameMatch = p.name?.toLowerCase().includes(searchLower);
+        const categoryMatch = p.category?.toLowerCase().includes(searchLower);
+        const subcategoryMatch = p.subcategory
+          ?.toLowerCase()
+          .includes(searchLower);
+        const descriptionMatch = p.description
+          ?.toLowerCase()
+          .includes(searchLower);
+        const colorMatch = p.color?.toLowerCase().includes(searchLower);
+        const materialMatch = p.material?.toLowerCase().includes(searchLower);
+
+        return (
+          nameMatch ||
+          categoryMatch ||
+          subcategoryMatch ||
+          descriptionMatch ||
+          colorMatch ||
+          materialMatch
+        );
+      });
     }
 
     // Category filter - NOW uses subCategory if available
     if (filters.categories && filters.categories.length > 0) {
       filtered = filtered.filter((p) => {
-        // Use subCategory if it exists, otherwise use category
         const productCategory = (p.subcategory || p.category || "")
           .trim()
           .toLowerCase();
-
         return filters.categories.some(
           (cat) => cat.trim().toLowerCase() === productCategory,
         );
@@ -228,7 +253,7 @@ export default function Office() {
                 <div className="relative flex-1 max-w-md">
                   <input
                     type="search"
-                    placeholder="Search office furniture..."
+                    placeholder="Search furniture..."
                     value={filters.search}
                     onChange={(e) =>
                       setFilters((prev) => ({
@@ -236,10 +261,16 @@ export default function Office() {
                         search: e.target.value,
                       }))
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        // Search is already applied via filters
+                      }
+                    }}
                     className="w-full px-4 py-3 pr-12 rounded-lg
-               bg-white/10 border border-white/50
-               text-white placeholder:text-white/70
-               focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
+      bg-white/10 border border-white/50
+      text-white placeholder:text-white/70
+      focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
                   />
                   <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white w-5 h-5" />
                 </div>
@@ -254,6 +285,42 @@ export default function Office() {
             </div>
           </div>
         </section>
+
+        {/* Search Status Banner */}
+        {filters.search && filters.search.trim() && (
+          <div className="bg-[#DA4C2F]/10 border-b border-[#DA4C2F]/20 py-3">
+            <div className="container flex items-center justify-between flex-wrap gap-2">
+              <p className="text-sm text-gray-700">
+                Showing results for:{" "}
+                <span className="font-semibold text-[#DA4C2F]">
+                  "{filters.search}"
+                </span>
+                <span className="text-gray-500 ml-2">
+                  ({filteredProducts.length}{" "}
+                  {filteredProducts.length === 1 ? "product" : "products"}{" "}
+                  found)
+                </span>
+              </p>
+              <button
+                onClick={() => {
+                  setFilters((prev) => ({ ...prev, search: "" }));
+                  // Also clear the URL
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete("search");
+                  window.history.replaceState(
+                    {},
+                    "",
+                    `${location.pathname}${newParams.toString() ? `?${newParams}` : ""}`,
+                  );
+                }}
+                className="text-sm text-[#DA4C2F] hover:underline font-medium flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Clear search
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Product Section */}
         <section className="py-8 md:py-12">
