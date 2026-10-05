@@ -10,12 +10,15 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { getProducts } from "../services/productService";
+import { useLocation, useSearchParams } from "react-router-dom";
 
 export default function HomeFurniture() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [filters, setFilters] = useState({
     categories: [],
     priceRange: { min: 0, max: 10000 },
@@ -36,6 +39,14 @@ export default function HomeFurniture() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Read search from URL on mount and when URL changes
+  useEffect(() => {
+    const searchFromUrl = searchParams.get("search");
+    if (searchFromUrl) {
+      setFilters((prev) => ({ ...prev, search: searchFromUrl }));
+    }
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     try {
@@ -106,31 +117,52 @@ export default function HomeFurniture() {
   };
 
   useEffect(() => {
-    applyFilters();
+    if (products.length > 0) {
+      applyFilters();
+    }
   }, [filters, sortBy, products]);
 
   const applyFilters = () => {
     let filtered = [...products];
 
     // Search filter
-    if (filters.search) {
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          (p.subCategory || p.category)
-            .toLowerCase()
-            .includes(filters.search.toLowerCase()),
-      );
+    if (filters.search && filters.search.trim()) {
+      const searchLower = filters.search.toLowerCase().trim();
+      filtered = filtered.filter((p) => {
+        // Search in name
+        const nameMatch = p.name?.toLowerCase().includes(searchLower);
+        // Search in category
+        const categoryMatch = p.category?.toLowerCase().includes(searchLower);
+        // Search in subcategory
+        const subcategoryMatch = p.subcategory
+          ?.toLowerCase()
+          .includes(searchLower);
+        // Search in description
+        const descriptionMatch = p.description
+          ?.toLowerCase()
+          .includes(searchLower);
+        // Search in color
+        const colorMatch = p.color?.toLowerCase().includes(searchLower);
+        // Search in material
+        const materialMatch = p.material?.toLowerCase().includes(searchLower);
+
+        return (
+          nameMatch ||
+          categoryMatch ||
+          subcategoryMatch ||
+          descriptionMatch ||
+          colorMatch ||
+          materialMatch
+        );
+      });
     }
 
     // Category filter - NOW uses subCategory if available
     if (filters.categories.length > 0) {
       filtered = filtered.filter((p) => {
-        // Use subCategory if it exists, otherwise use category
         const productCategory = (p.subcategory || p.category || "")
           .trim()
           .toLowerCase();
-
         return filters.categories.some(
           (cat) => cat.trim().toLowerCase() === productCategory,
         );
@@ -287,10 +319,16 @@ export default function HomeFurniture() {
                         search: e.target.value,
                       }))
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        // Search is already applied via filters
+                      }
+                    }}
                     className="w-full px-4 py-3 pr-12 rounded-lg
-               bg-white/10 border border-white/50
-               text-white placeholder:text-white/70
-               focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
+      bg-white/10 border border-white/50
+      text-white placeholder:text-white/70
+      focus:outline-none focus:ring-2 focus:ring-[#DA4C2F]"
                   />
                   <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white w-5 h-5" />
                 </div>
@@ -305,6 +343,41 @@ export default function HomeFurniture() {
             </div>
           </div>
         </section>
+
+        {/* Search Status Banner */}
+        {filters.search && filters.search.trim() && (
+          <div className="bg-[#DA4C2F]/10 border-b border-[#DA4C2F]/20 py-3">
+            <div className="container flex items-center justify-between flex-wrap gap-2">
+              <p className="text-sm text-gray-700">
+                Showing results for:{" "}
+                <span className="font-semibold text-[#DA4C2F]">
+                  "{filters.search}"
+                </span>
+                <span className="text-gray-500 ml-2">
+                  ({filteredProducts.length}{" "}
+                  {filteredProducts.length === 1 ? "product" : "products"}{" "}
+                  found)
+                </span>
+              </p>
+              <button
+                onClick={() => {
+                  setFilters((prev) => ({ ...prev, search: "" }));
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete("search");
+                  window.history.replaceState(
+                    {},
+                    "",
+                    `${location.pathname}${newParams.toString() ? `?${newParams}` : ""}`,
+                  );
+                }}
+                className="text-sm text-[#DA4C2F] hover:underline font-medium flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Clear search
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Product Section */}
         <section className="py-8 md:py-12">
