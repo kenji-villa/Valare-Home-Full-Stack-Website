@@ -19,6 +19,7 @@ import GiftCard from "./pages/GiftCard";
 import BundleSave from "./pages/BundleSave";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import SearchResults from "./pages/SearchResults";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
           <Route path="/gift-card" element={<GiftCard />} />
           <Route path="/bundle-save" element={<BundleSave />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/search" element={<SearchResults />} />
           {/* Protected Routes - Require Login */}
           <Route
             path="/favorites"
