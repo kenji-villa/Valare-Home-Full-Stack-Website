@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
@@ -27,6 +27,13 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [error, setError] = useState(null);
+
+  // After a successful order, show the confirmation briefly, then go to My Orders
+  useEffect(() => {
+    if (!orderSuccess) return;
+    const timer = setTimeout(() => navigate("/my-orders"), 3000);
+    return () => clearTimeout(timer);
+  }, [orderSuccess, navigate]);
   const [formData, setFormData] = useState({
     fullName:
       user?.profile?.firstName && user?.profile?.lastName
@@ -146,7 +153,11 @@ export default function Checkout() {
       console.log("📥 Response:", response);
 
       if (response.success) {
-        // ... success handling
+        // Show the confirmation first, then empty the cart (local + database)
+        setOrderSuccess(true);
+        await clearCart();
+      } else {
+        throw new Error(response.message || "Failed to place order");
       }
     } catch (error) {
       console.error("❌ Order error:", error);
@@ -165,13 +176,13 @@ export default function Checkout() {
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-3">
+            <h1 className="text-2xl font-bold text-green-600 mb-3">
               Order Placed!
             </h1>
-            <p className="text-gray-600 mb-6">
+            <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 mb-6">
               Your order has been placed successfully. Redirecting to your
               orders...
-            </p>
+            </div>
             <div className="w-12 h-12 border-4 border-[#DA4C2F] border-t-transparent rounded-full animate-spin mx-auto"></div>
           </div>
         </div>
