@@ -1,15 +1,27 @@
 const User = require('../models/User');
+const Product = require('../models/Product');
 
-// @desc    Get current user's cart
+// @desc    Get user's cart
 // @route   GET /api/cart
 // @access  Private
 const getCart = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('cart.product');
+    const user = await User.findById(req.user._id)
+      .populate('cart.product');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Filter out any cart items whose product was deleted
+    const validCart = user.cart.filter(item => item.product != null);
 
     res.json({
       success: true,
-      cart: user.cart
+      cart: validCart
     });
   } catch (error) {
     console.error('Get cart error:', error);
@@ -21,12 +33,12 @@ const getCart = async (req, res) => {
   }
 };
 
-// @desc    Add a product to the cart 
-// @route   POST /api/cart/add
+// @desc    Add item to cart
+// @route   POST /api/cart
 // @access  Private
 const addToCart = async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
+    const { productId, quantity = 1 } = req.body;
 
     if (!productId) {
       return res.status(400).json({
@@ -35,27 +47,34 @@ const addToCart = async (req, res) => {
       });
     }
 
-    const qtyToAdd = Math.max(1, parseInt(quantity, 10) || 1);
-
-    // If the product is already in the cart, increment its quantity atomically
-    let user = await User.findOneAndUpdate(
-      { _id: req.user._id, 'cart.product': productId },
-      { $inc: { 'cart.$.quantity': qtyToAdd } },
-      { new: true }
-    ).populate('cart.product');
-
-    // Otherwise, add it as a new cart entry
-    if (!user) {
-      user = await User.findByIdAndUpdate(
-        req.user._id,
-        { $push: { cart: { product: productId, quantity: qtyToAdd } } },
-        { new: true }
-      ).populate('cart.product');
+    // Check if product exists
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
     }
+
+    const user = await User.findById(req.user._id);
+
+    // Check if already in cart
+    const existingIndex = user.cart.findIndex(
+      item => item.product.toString() === productId
+    );
+
+    if (existingIndex > -1) {
+      user.cart[existingIndex].quantity += quantity;
+    } else {
+      user.cart.push({ product: productId, quantity });
+    }
+
+    await user.save();
+    await user.populate('cart.product');
 
     res.json({
       success: true,
-      message: 'Added to cart',
+      message: 'Item added to cart',
       cart: user.cart
     });
   } catch (error) {
@@ -68,47 +87,36 @@ const addToCart = async (req, res) => {
   }
 };
 
-// @desc    Set the exact quantity for a product already in the cart
-//          (quantity <= 0 removes the item)
-// @route   PUT /api/cart/update
+// @desc    Update cart item quantity
+// @route   PUT /api/cart/:productId
 // @access  Private
 const updateCartItem = async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
+    const { productId } = req.params;
+    const { quantity } = req.body;
 
-    if (!productId || quantity === undefined) {
+    if (!quantity || quantity < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Product ID and quantity are required'
+        message: 'Quantity must be at least 1'
       });
     }
 
-    if (quantity <= 0) {
-      const user = await User.findByIdAndUpdate(
-        req.user._id,
-        { $pull: { cart: { product: productId } } },
-        { new: true }
-      ).populate('cart.product');
+    const user = await User.findById(req.user._id);
+    const item = user.cart.find(
+      item => item.product.toString() === productId
+    );
 
-      return res.json({
-        success: true,
-        message: 'Item removed from cart',
-        cart: user.cart
-      });
-    }
-
-    const user = await User.findOneAndUpdate(
-      { _id: req.user._id, 'cart.product': productId },
-      { $set: { 'cart.$.quantity': quantity } },
-      { new: true }
-    ).populate('cart.product');
-
-    if (!user) {
+    if (!item) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found in cart'
+        message: 'Item not found in cart'
       });
     }
+
+    item.quantity = quantity;
+    await user.save();
+    await user.populate('cart.product');
 
     res.json({
       success: true,
@@ -116,7 +124,7 @@ const updateCartItem = async (req, res) => {
       cart: user.cart
     });
   } catch (error) {
-    console.error('Update cart item error:', error);
+    console.error('Update cart error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update cart',
@@ -125,29 +133,24 @@ const updateCartItem = async (req, res) => {
   }
 };
 
-// @desc    Remove a single product from the cart
-// @route   DELETE /api/cart/remove
+// @desc    Remove item from cart
+// @route   DELETE /api/cart/:productId
 // @access  Private
 const removeFromCart = async (req, res) => {
   try {
-    const { productId } = req.body;
+    const { productId } = req.params;
 
-    if (!productId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Product ID is required'
-      });
-    }
+    const user = await User.findById(req.user._id);
+    user.cart = user.cart.filter(
+      item => item.product.toString() !== productId
+    );
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { $pull: { cart: { product: productId } } },
-      { new: true }
-    ).populate('cart.product');
+    await user.save();
+    await user.populate('cart.product');
 
     res.json({
       success: true,
-      message: 'Removed from cart',
+      message: 'Item removed from cart',
       cart: user.cart
     });
   } catch (error) {
@@ -160,21 +163,19 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-// @desc    Clear the entire cart in a single atomic operation
-// @route   DELETE /api/cart/clear
+// @desc    Clear entire cart
+// @route   DELETE /api/cart
 // @access  Private
 const clearCart = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: { cart: [] } },
-      { new: true }
-    );
+    const user = await User.findById(req.user._id);
+    user.cart = [];
+    await user.save();
 
     res.json({
       success: true,
-      message: 'Cart cleared successfully',
-      cart: user.cart
+      message: 'Cart cleared',
+      cart: []
     });
   } catch (error) {
     console.error('Clear cart error:', error);

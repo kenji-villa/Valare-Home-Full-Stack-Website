@@ -4,7 +4,8 @@ const OrderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
     unique: true,
-    required: true
+    sparse: true,
+    index: true
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -81,7 +82,8 @@ const OrderSchema = new mongoose.Schema({
   orderStatus: {
     type: String,
     enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-    default: 'Pending'
+    default: 'Pending',
+    index:true
   },
   trackingNumber: {
     type: String,
@@ -96,15 +98,36 @@ const OrderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate order number before saving
-OrderSchema.pre('save', function(next) {
+
+OrderSchema.pre('validate', function(next) {
   if (!this.orderNumber) {
     const date = new Date();
     const year = date.getFullYear();
     const timestamp = Date.now().toString().slice(-6);
-    this.orderNumber = `ORD-${year}-${timestamp}`;
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    this.orderNumber = `ORD-${year}-${timestamp}${random}`;
   }
   next();
 });
+
+// Generate order number before saving
+OrderSchema.pre('save', function(next) {
+  if (this.isNew && (!this.statusHistory || this.statusHistory.length === 0)) {
+    this.statusHistory = [{
+      status: this.status || 'Pending',
+      changedAt: new Date(),
+      note: 'Order created'
+    }];
+  }
+  next();
+});
+  
+  // Calculate totals
+OrderSchema.methods.calculateTotals = function() {
+  this.subtotal = this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  this.total = this.subtotal + this.shippingCost - this.discount;
+  return this.total;
+};
+ 
 
 module.exports = mongoose.model('Order', OrderSchema);

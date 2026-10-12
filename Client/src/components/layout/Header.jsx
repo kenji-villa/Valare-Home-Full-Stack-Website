@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { getProducts } from "../../services/productService";
+import { Package } from "lucide-react";
 import {
   CircleUser,
   Star,
@@ -373,7 +374,6 @@ export default function Header() {
                           </span>
                         )}
                       </div>
-
                       {user.role === "admin" && (
                         <button
                           onClick={handleAdminNavigate}
@@ -386,7 +386,6 @@ export default function Header() {
                           </span>
                         </button>
                       )}
-
                       <button
                         onClick={() => {
                           setIsUserDropdownOpen(false);
@@ -396,6 +395,17 @@ export default function Header() {
                       >
                         <User className="w-4 h-4" />
                         <span className="text-sm">My Profile</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsUserDropdownOpen(false);
+                          navigate("/my-orders");
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700 transition-colors"
+                      >
+                        <Package className="w-4 h-4" />
+                        <span className="text-sm">My Orders</span>
                       </button>
 
                       <button

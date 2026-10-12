@@ -10,87 +10,81 @@ const fetchWithAuth = async (url, options = {}) => {
     const token = getAuthToken();
     const headers = {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
       ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     };
 
-    const response = await fetch(url, {
-      ...options,
+    const response = await fetch(url, { 
+      ...options, 
       headers,
+      cache: 'no-store', // ✅ Prevent browser caching
     });
-
+    
     let data;
     try {
       data = await response.json();
     } catch (e) {
-      const text = await response.text();
-      data = { success: false, message: text || 'Server error' };
+      data = { success: false, message: 'Server error' };
     }
     
     if (!response.ok) {
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
-    
     return data;
   } catch (error) {
-    console.error('fetchWithAuth error:', error);
+    console.error('API error:', error);
     throw error;
   }
 };
 
-// Get all orders
-export const getOrders = async (filters = {}) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (filters.status) queryParams.append('status', filters.status);
-    if (filters.limit) queryParams.append('limit', filters.limit);
-    if (filters.page) queryParams.append('page', filters.page);
-    
-    const url = queryParams.toString() 
-      ? `${API_BASE_URL}/orders?${queryParams}`
-      : `${API_BASE_URL}/orders`;
-    
-    return await fetchWithAuth(url, { method: 'GET' });
-  } catch (error) {
-    console.error('Get orders error:', error);
-    throw error;
-  }
-};
 
-// Get single order
-export const getOrderById = async (id) => {
-  try {
-    return await fetchWithAuth(`${API_BASE_URL}/orders/${id}`, { method: 'GET' });
-  } catch (error) {
-    console.error('Get order error:', error);
-    throw error;
-  }
-};
-
-// Create order
 export const createOrder = async (orderData) => {
-  try {
-    return await fetchWithAuth(`${API_BASE_URL}/orders`, {
-      method: 'POST',
-      body: JSON.stringify(orderData),
-    });
-  } catch (error) {
-    console.error('Create order error:', error);
-    throw error;
-  }
+  return fetchWithAuth(`${API_BASE_URL}/orders`, {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+};
+
+export const getMyOrders = async () => {
+  return fetchWithAuth(`${API_BASE_URL}/orders/my-orders`, {
+    method: 'GET',
+  });
+};
+
+export const getOrderById = async (id) => {
+  return fetchWithAuth(`${API_BASE_URL}/orders/${id}`, {
+    method: 'GET',
+  });
+};
+
+export const cancelOrder = async (id) => {
+  return fetchWithAuth(`${API_BASE_URL}/orders/${id}/cancel`, {
+    method: 'PUT',
+  });
+};
+
+
+// Admin
+export const getAllOrders = async (filters = {}) => {
+  const params = new URLSearchParams(filters);
+  return fetchWithAuth(`${API_BASE_URL}/orders?${params}`, {
+    method: 'GET',
+  });
 };
 
 // Update order status (admin only)
-export const updateOrderStatus = async (id, status) => {
-  try {
-    return await fetchWithAuth(`${API_BASE_URL}/orders/${id}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
-    });
-  } catch (error) {
-    console.error('Update order status error:', error);
-    throw error;
-  }
+export const updateOrderStatus = async (id, status, note = '') => {
+  return fetchWithAuth(`${API_BASE_URL}/orders/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status, note }),
+  });
+};
+export const getOrderStats = async () => {
+  return fetchWithAuth(`${API_BASE_URL}/orders/stats`, {
+    method: 'GET',
+  });
 };
 
 // Delete order (admin only)

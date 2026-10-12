@@ -11,28 +11,41 @@ import {
   ChevronRight,
   ShoppingBag,
   Ticket,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { createOrder } from "../services/orderService";
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, getCartTotal } = useCart();
+  const { user } = useAuth();
+  const { cartItems, getCartTotal, clearCart } = useCart();
+
   const [deliveryMethod, setDeliveryMethod] = useState("delivery");
+  const [submitting, setSubmitting] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    country: "",
-    city: "",
-    state: "",
-    zipCode: "",
+    fullName:
+      user?.profile?.firstName && user?.profile?.lastName
+        ? `${user.profile.firstName} ${user.profile.lastName}`
+        : user?.username || "",
+    email: user?.email || "",
+    phone: user?.profile?.phone || "",
+    country: user?.profile?.address?.country || "Ethiopia",
+    city: user?.profile?.address?.city || "",
+    state: user?.profile?.address?.state || "",
+    zipCode: user?.profile?.address?.zipCode || "",
+    address: user?.profile?.address?.street || "",
     agreeTerms: false,
   });
   const [discountCode, setDiscountCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState(false);
 
   const subtotal = getCartTotal();
-  const shipping = deliveryMethod === "delivery" ? 500.0 : 0;
+  const shipping = deliveryMethod === "delivery" ? 5.0 : 0;
   const discount = discountApplied ? 10.0 : 0;
   const total = subtotal + shipping - discount;
 
@@ -42,42 +55,152 @@ export default function Checkout() {
       ...prev,
       [id]: type === "checkbox" ? checked : value,
     }));
+    // Clear error when user types
+    if (error) setError(null);
   };
 
   const handleApplyDiscount = () => {
     if (discountCode.toLowerCase() === "welcome10") {
       setDiscountApplied(true);
     } else {
-      alert("Invalid discount code");
+      alert('Invalid discount code. Try "WELCOME10"');
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    console.log("🔵 Starting order submission...");
+    console.log("User:", user);
+    console.log("Cart items:", cartItems);
+    console.log("Form data:", formData);
+
+    // Validation
     if (!formData.agreeTerms) {
-      alert("Please agree to the Terms and Conditions");
+      setError("Please agree to the Terms and Conditions");
       return;
     }
-    alert("Order placed successfully!");
-    navigate("/");
+
+    if (cartItems.length === 0) {
+      setError("Your cart is empty");
+      return;
+    }
+
+    if (!user) {
+      navigate("/login?form=login");
+      return;
+    }
+
+    // Validate required fields
+    const requiredFields = [
+      "fullName",
+      "email",
+      "phone",
+      "country",
+      "city",
+      "state",
+      "zipCode",
+    ];
+    for (const field of requiredFields) {
+      if (!formData[field]?.trim()) {
+        setError(`Please fill in all required fields (${field})`);
+        return;
+      }
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const orderItems = cartItems.map((item) => ({
+        product: item.id,
+        name: item.name,
+        price: parseFloat(String(item.price).replace(/[^0-9.-]+/g, "")) || 0,
+        quantity: item.quantity,
+        image: item.image,
+      }));
+
+      const orderData = {
+        items: orderItems,
+        shippingAddress: {
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          country: formData.country,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          address: formData.address || `${formData.city}, ${formData.state}`,
+        },
+        deliveryMethod: deliveryMethod,
+        paymentMethod: "Cash on Delivery",
+        subtotal: subtotal,
+        shippingCost: shipping,
+        discount: discount,
+        total: total,
+      };
+
+      console.log("📤 Sending order data:", orderData);
+
+      const response = await createOrder(orderData);
+      console.log("📥 Response:", response);
+
+      if (response.success) {
+        // ... success handling
+      }
+    } catch (error) {
+      console.error("❌ Order error:", error);
+      setError(error.message || "Failed to place order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (orderSuccess) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-12 max-w-md w-full text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-3">
+              Order Placed!
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Your order has been placed successfully. Redirecting to your
+              orders...
+            </p>
+            <div className="w-12 h-12 border-4 border-[#DA4C2F] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
       <Header />
       <main className="bg-gray-50 min-h-screen py-8">
         <div className="container">
+          {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
             <Link to="/" className="hover:text-[#DA4C2F]">
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link to="/cart" className="hover:text-[#DA4C2F]">
-              Cart
-            </Link>
-            <ChevronRight className="w-4 h-4" />
             <span className="text-gray-800 font-medium">Checkout</span>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Checkout Form */}
@@ -133,7 +256,7 @@ export default function Checkout() {
                           htmlFor="fullName"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Full name
+                          Full name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -145,12 +268,13 @@ export default function Checkout() {
                           required
                         />
                       </div>
+
                       <div>
                         <label
                           htmlFor="email"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Email address
+                          Email address <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="email"
@@ -162,12 +286,13 @@ export default function Checkout() {
                           required
                         />
                       </div>
+
                       <div>
                         <label
                           htmlFor="phone"
                           className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                          Phone number
+                          Phone number <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="tel"
@@ -179,13 +304,14 @@ export default function Checkout() {
                           required
                         />
                       </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label
                             htmlFor="country"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            Country
+                            Country <span className="text-red-500">*</span>
                           </label>
                           <select
                             id="country"
@@ -195,10 +321,10 @@ export default function Checkout() {
                             required
                           >
                             <option value="">Choose country</option>
-                            <option value="US">United States</option>
-                            <option value="UK">United Kingdom</option>
-                            <option value="CA">Canada</option>
-                            <option value="AU">Australia</option>
+                            <option value="Ethiopia">Ethiopia</option>
+                            <option value="Kenya">Kenya</option>
+                            <option value="Djibouti">Djibouti</option>
+                            <option value="Sudan">Sudan</option>
                           </select>
                         </div>
                         <div>
@@ -206,7 +332,7 @@ export default function Checkout() {
                             htmlFor="city"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            City
+                            City <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -219,13 +345,14 @@ export default function Checkout() {
                           />
                         </div>
                       </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label
                             htmlFor="state"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            State
+                            State <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -242,7 +369,7 @@ export default function Checkout() {
                             htmlFor="zipCode"
                             className="block text-sm font-medium text-gray-700 mb-1"
                           >
-                            ZIP Code
+                            ZIP Code <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -275,19 +402,29 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  {/* Place Order Button */}
+                  {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-[#DA4C2F] text-white py-3 rounded-lg font-semibold hover:bg-[#c43d22] transition-colors flex items-center justify-center gap-2"
+                    disabled={submitting || cartItems.length === 0}
+                    className="w-full bg-[#DA4C2F] text-white py-3 rounded-lg font-semibold hover:bg-[#c43d22] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Lock className="w-5 h-5" />
-                    Place Order • ETB {total.toFixed(2)}
+                    {submitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Placing Order...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-5 h-5" />
+                        Place Order • ETB {total.toFixed(2)}
+                      </>
+                    )}
                   </button>
                 </form>
               </div>
             </div>
 
-            {/* Order Summary */}
+            {/* Order Summary - Keep existing */}
             <div className="lg:w-96">
               <div className="bg-white rounded-lg p-6 shadow-sm sticky top-24">
                 <h2 className="text-lg font-bold text-[#1a2d5e] mb-4 flex items-center gap-2">
@@ -304,15 +441,25 @@ export default function Checkout() {
                         key={item.id}
                         className="flex items-center justify-between py-2 border-b border-gray-100"
                       >
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-800">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {item.quantity}x
-                          </p>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-12 h-12 object-cover rounded"
+                            onError={(e) => {
+                              e.target.src = "/assets/images/placeholder.jpg";
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">
+                              {item.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Qty: {item.quantity}
+                            </p>
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold text-[#DA4C2F]">
+                        <span className="text-sm font-semibold text-[#DA4C2F] whitespace-nowrap">
                           {item.price}
                         </span>
                       </div>
@@ -371,10 +518,6 @@ export default function Checkout() {
                   <Shield className="w-5 h-5 text-[#DA4C2F] flex-shrink-0" />
                   <span>Secure Checkout - SSL Encrypted</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Ensuring your financial and personal details are secure during
-                  every transaction.
-                </p>
               </div>
             </div>
           </div>

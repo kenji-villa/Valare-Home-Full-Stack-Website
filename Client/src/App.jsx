@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
 import ScrollToTop from "./components/common/ScrollToTop";
 import Home from "./pages/Home";
 import HomeFurniture from "./pages/HomeFurniture";
@@ -20,60 +21,64 @@ import BundleSave from "./pages/BundleSave";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import SearchResults from "./pages/SearchResults";
+import MyOrders from "./pages/MyOrders";
 
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/home-furniture" element={<HomeFurniture />} />
-          <Route path="/office" element={<Office />} />
-          <Route path="/specials" element={<Specials />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/shipping" element={<ShippingFAQ />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/terms" element={<TermsConditions />} />
-          <Route path="/gift-card" element={<GiftCard />} />
-          <Route path="/bundle-save" element={<BundleSave />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/search" element={<SearchResults />} />
-          {/* Protected Routes - Require Login */}
-          <Route
-            path="/favorites"
-            element={
-              <ProtectedRoute>
-                <Favorites />
-              </ProtectedRoute>
-            }
-          />
+      <SocketProvider>
+        <CartProvider>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/home-furniture" element={<HomeFurniture />} />
+            <Route path="/office" element={<Office />} />
+            <Route path="/specials" element={<Specials />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/shipping" element={<ShippingFAQ />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/gift-card" element={<GiftCard />} />
+            <Route path="/bundle-save" element={<BundleSave />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/my-orders" element={<MyOrders />} />
+            {/* Protected Routes - Require Login */}
+            <Route
+              path="/favorites"
+              element={
+                <ProtectedRoute>
+                  <Favorites />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/checkout"
-            element={
-              <ProtectedRoute>
-                <Checkout />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute>
+                  <Checkout />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Admin Only Route */}
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute requireAdmin={true}>
-                <Admin />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </CartProvider>
+            {/* Admin Only Route */}
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </CartProvider>
+      </SocketProvider>
     </AuthProvider>
   );
 }
