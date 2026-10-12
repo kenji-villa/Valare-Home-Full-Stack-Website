@@ -40,7 +40,6 @@ const createOrder = async (req, res) => {
     // Validate and prepare items
     const validatedItems = [];
     for (const item of items) {
-      // Check if product exists (optional - won't fail if not found)
       let productImage = item.image || '/assets/images/placeholder.jpg';
       let productName = item.name || 'Product';
       
@@ -65,22 +64,22 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Generate order number manually (backup for the pre-validate hook)
+    // Generate order number
     const date = new Date();
     const year = date.getFullYear();
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     const orderNumber = `ORD-${year}-${timestamp}${random}`;
 
-    // Calculate subtotal from validated items
+    // Calculate totals
     const calculatedSubtotal = validatedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     const finalShippingCost = shippingCost || 0;
     const finalDiscount = discount || 0;
-    const calculatedTotal = subtotal || calculatedSubtotal + finalShippingCost - finalDiscount;
+    const calculatedTotal = calculatedSubtotal + finalShippingCost - finalDiscount;
 
-    // Create order with explicit orderNumber
+    // Create order
     const order = new Order({
-      orderNumber,  // ← Explicitly set orderNumber
+      orderNumber,
       user: req.user._id,
       items: validatedItems,
       subtotal: calculatedSubtotal,
@@ -101,8 +100,9 @@ const createOrder = async (req, res) => {
     });
 
     await order.save();
+    console.log('✅ Order created:', order.orderNumber);
 
-    // ✅ Emit new order event to admins
+    // Emit socket event
     const io = req.app.get('io');
     if (io) {
       io.to('admin-room').emit('new-order', {
@@ -113,6 +113,12 @@ const createOrder = async (req, res) => {
       });
     }
 
+    // ✅ MUST RETURN A RESPONSE
+    res.status(201).json({
+      success: true,
+      message: 'Order placed successfully',
+      order
+    });
   } catch (error) {
     console.error('❌ Create order error:', error);
     res.status(500).json({
@@ -360,7 +366,15 @@ const deleteOrder = async (req, res) => {
 // @access  Private
 const cancelOrder = async (req, res) => {
   try {
+    console.log('='.repeat(50));
+    console.log('🚫 CANCEL ORDER REQUEST');
+    console.log('Order ID:', req.params.id);
+    console.log('User ID:', req.user._id);
+    console.log('User role:', req.user.role);
+    console.log('='.repeat(50));
     const orderId = req.params.id;
+
+    console.log('🚫 Cancel order request:', orderId, 'from user:', req.user._id);
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
@@ -379,7 +393,9 @@ const cancelOrder = async (req, res) => {
       });
     }
 
-    // Check ownership - allow admin too
+    console.log('📦 Order status:', order.status, 'User:', order.user);
+
+    // Check ownership
     if (
       req.user.role !== 'admin' &&
       order.user.toString() !== req.user._id.toString()
@@ -398,7 +414,6 @@ const cancelOrder = async (req, res) => {
       });
     }
 
-    // Can't cancel already-cancelled order
     if (order.status === 'Cancelled') {
       return res.status(400).json({
         success: false,
@@ -406,6 +421,7 @@ const cancelOrder = async (req, res) => {
       });
     }
 
+    // ✅ Update status
     order.status = 'Cancelled';
 
     if (!order.statusHistory) {
@@ -419,9 +435,11 @@ const cancelOrder = async (req, res) => {
       note: 'Cancelled by customer'
     });
 
+    // ✅ MUST await save
     await order.save();
+    console.log('✅ Order cancelled and saved:', order.orderNumber);
 
-    // Restore stock safely (don't fail whole operation if stock update fails)
+    // Restore stock
     for (const item of order.items) {
       if (item.product) {
         try {
@@ -434,7 +452,7 @@ const cancelOrder = async (req, res) => {
       }
     }
 
-    // Emit socket event (optional, don't crash if not set up)
+    // Emit socket event
     try {
       const io = req.app.get('io');
       if (io) {
@@ -451,13 +469,16 @@ const cancelOrder = async (req, res) => {
       console.log('Socket emit failed:', socketErr.message);
     }
 
+    // ✅ Return the fresh saved order
+    const updatedOrder = await Order.findById(orderId);
+
     res.json({
       success: true,
       message: 'Order cancelled successfully',
-      order
+      order: updatedOrder
     });
   } catch (error) {
-    console.error('Cancel order error:', error);
+    console.error('❌ Cancel order error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to cancel order',
