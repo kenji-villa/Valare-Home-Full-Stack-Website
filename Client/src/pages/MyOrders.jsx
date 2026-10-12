@@ -159,7 +159,12 @@ export default function MyOrders() {
   // Refetch on window focus
   useEffect(() => {
     const handleFocus = () => {
-      if (user) fetchOrders(true);
+      if (user) {
+        fetchOrders(true).catch((err) => {
+          // Silently ignore - server might be temporarily down
+          console.log("Background refetch skipped:", err.message);
+        });
+      }
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
@@ -171,14 +176,42 @@ export default function MyOrders() {
     try {
       setCancelling(orderId);
       const response = await cancelOrder(orderId);
-      if (response.success) {
-        setOrders(
-          orders.map((o) =>
-            o._id === orderId ? { ...o, status: "Cancelled" } : o,
+
+      console.log("🚫 Cancel response:", response);
+
+      if (response.success && response.order) {
+        // ✅ Update with the SERVER's response, not just a local change
+        setOrders((prevOrders) =>
+          prevOrders.map((o) =>
+            o._id === orderId
+              ? {
+                  ...o,
+                  status: response.order.status,
+                  updatedAt: response.order.updatedAt,
+                }
+              : o,
           ),
         );
+
+        // Update selected order if it's open
+        setSelectedOrder((prev) =>
+          prev && prev._id === orderId
+            ? { ...prev, status: response.order.status }
+            : prev,
+        );
+
+        // Optional: show a nice toast
+        setLiveUpdate({
+          orderId: response.order.orderNumber,
+          status: "Cancelled",
+          message: `Order ${response.order.orderNumber} has been cancelled`,
+        });
+        setTimeout(() => setLiveUpdate(null), 5000);
+      } else {
+        throw new Error(response.message || "Failed to cancel order");
       }
     } catch (error) {
+      console.error("❌ Cancel error:", error);
       alert(error.message || "Failed to cancel order");
     } finally {
       setCancelling(null);
