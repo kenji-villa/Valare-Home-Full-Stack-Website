@@ -6,8 +6,7 @@ const Product = require('../models/Product');
 // @access  Private
 const getCart = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('cart.product');
+    const user = await User.findById(req.user._id).populate('cart.product');
 
     if (!user) {
       return res.status(404).json({
@@ -16,7 +15,7 @@ const getCart = async (req, res) => {
       });
     }
 
-    // Filter out any cart items whose product was deleted
+    // Filter out cart items whose product was deleted
     const validCart = user.cart.filter(item => item.product != null);
 
     res.json({
@@ -34,7 +33,7 @@ const getCart = async (req, res) => {
 };
 
 // @desc    Add item to cart
-// @route   POST /api/cart
+// @route   POST /api/cart/add
 // @access  Private
 const addToCart = async (req, res) => {
   try {
@@ -47,7 +46,6 @@ const addToCart = async (req, res) => {
       });
     }
 
-    // Check if product exists
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({
@@ -58,7 +56,6 @@ const addToCart = async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
-    // Check if already in cart
     const existingIndex = user.cart.findIndex(
       item => item.product.toString() === productId
     );
@@ -88,17 +85,16 @@ const addToCart = async (req, res) => {
 };
 
 // @desc    Update cart item quantity
-// @route   PUT /api/cart/:productId
+// @route   PUT /api/cart/update
 // @access  Private
 const updateCartItem = async (req, res) => {
   try {
-    const { productId } = req.params;
-    const { quantity } = req.body;
+    const { productId, quantity } = req.body;
 
-    if (!quantity || quantity < 1) {
+    if (!productId || quantity == null) {
       return res.status(400).json({
         success: false,
-        message: 'Quantity must be at least 1'
+        message: 'Product ID and quantity are required'
       });
     }
 
@@ -114,7 +110,15 @@ const updateCartItem = async (req, res) => {
       });
     }
 
-    item.quantity = quantity;
+    if (quantity <= 0) {
+      // Remove if quantity is 0 or less
+      user.cart = user.cart.filter(
+        i => i.product.toString() !== productId
+      );
+    } else {
+      item.quantity = quantity;
+    }
+
     await user.save();
     await user.populate('cart.product');
 
@@ -134,11 +138,18 @@ const updateCartItem = async (req, res) => {
 };
 
 // @desc    Remove item from cart
-// @route   DELETE /api/cart/:productId
+// @route   DELETE /api/cart/remove
 // @access  Private
 const removeFromCart = async (req, res) => {
   try {
-    const { productId } = req.params;
+    const { productId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product ID is required'
+      });
+    }
 
     const user = await User.findById(req.user._id);
     user.cart = user.cart.filter(
@@ -164,7 +175,7 @@ const removeFromCart = async (req, res) => {
 };
 
 // @desc    Clear entire cart
-// @route   DELETE /api/cart
+// @route   DELETE /api/cart/clear
 // @access  Private
 const clearCart = async (req, res) => {
   try {
