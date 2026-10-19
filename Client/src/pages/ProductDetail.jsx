@@ -135,13 +135,18 @@ export default function ProductDetail() {
         typeof product.price === "number"
           ? `ETB ${product.price.toFixed(2)}`
           : product.price;
-      addToCart({
-        id: product._id,
-        name: product.name,
-        price: price,
-        image: mainImage,
-        quantity: quantity,
-      });
+
+      // ✅ Pass the quantity as the second argument
+      addToCart(
+        {
+          id: product._id,
+          name: product.name,
+          price: price,
+          image: mainImage,
+        },
+        quantity,
+      );
+
       setIsAddedToCart(true);
       setTimeout(() => setIsAddedToCart(false), 2000);
     }
