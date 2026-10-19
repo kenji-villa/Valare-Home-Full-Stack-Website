@@ -45,7 +45,7 @@ export default function AdminHeader({ activeTab, darkMode, user }) {
 
   return (
     <div
-      className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10`}
+      className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} border-b px-6 py-4 flex items-center justify-between sticky top-0 z-50`}
     >
       <div>
         <h1
@@ -81,7 +81,7 @@ export default function AdminHeader({ activeTab, darkMode, user }) {
         </button>
 
         {/* Profile Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative z-50" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className={`flex items-center gap-2 pl-4 border-l ${darkMode ? "border-gray-700" : "border-gray-200"} transition-colors`}
