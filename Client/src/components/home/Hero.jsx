@@ -6,7 +6,7 @@ const heroData = [
     title: "Your Comfort <br /> is Our Happiness",
     description:
       "Our commitment to quality extends far beyond the furniture itself. We believe that exceptional service is the cornerstone of a truly refined experience.",
-    price: "Starting at ETB 65,000",
+    price: "Starting at Fair Price",
   },
   {
     image: "/assets/images/KF.jpg",
@@ -52,7 +52,7 @@ export default function Hero() {
                     {slide.price}
                   </p>
                   <a
-                    href="#"
+                    href="/home-furniture"
                     className="btn-primary inline-flex items-center gap-2"
                   >
                     Shop Now <FaArrowRight className="w-5 h-5" />
