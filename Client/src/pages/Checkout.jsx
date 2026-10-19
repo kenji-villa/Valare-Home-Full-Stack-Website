@@ -52,7 +52,7 @@ export default function Checkout() {
   const [discountApplied, setDiscountApplied] = useState(false);
 
   const subtotal = getCartTotal();
-  const shipping = deliveryMethod === "delivery" ? 5.0 : 0;
+  const shipping = deliveryMethod === "delivery" ? 500.0 : 0;
   const discount = discountApplied ? 10.0 : 0;
   const total = subtotal + shipping - discount;
 
@@ -470,9 +470,6 @@ export default function Checkout() {
                             </p>
                           </div>
                         </div>
-                        <span className="text-sm font-semibold text-[#DA4C2F] whitespace-nowrap">
-                          {item.price}
-                        </span>
                       </div>
                     ))
                   )}
