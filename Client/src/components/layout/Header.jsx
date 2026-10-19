@@ -502,7 +502,7 @@ export default function Header() {
                             <img
                               src={item.image}
                               alt={item.name}
-                              className="w-14 h-14 md:w-16 md:h-16 object-cover"
+                              className="w-14 h-14 object-cover"
                             />
                             <div className="flex-1 min-w-0">
                               <h4 className="font-medium text-xs md:text-sm text-gray-800 truncate">
@@ -520,6 +520,7 @@ export default function Header() {
                                 >
                                   <Minus className="w-2.5 h-2.5" />
                                 </button>
+                                {/* ✅ This should show the correct quantity */}
                                 <span className="text-xs md:text-sm w-5 md:w-6 text-center font-medium">
                                   {item.quantity}
                                 </span>
