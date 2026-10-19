@@ -167,24 +167,49 @@ const getMe = async (req, res) => {
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
 const updateProfile = async (req, res) => {
   try {
     const { username, profile } = req.body;
 
-    const updates = {};
-    if (username) updates.username = username;
-    if (profile) updates.profile = profile;
+    const user = await User.findById(req.user._id);
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      updates,
-      { new: true, runValidators: true }
-    ).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update basic info
+    if (username) user.username = username;
+
+    // Update profile fields if provided
+    if (profile) {
+      if (profile.firstName !== undefined) user.profile.firstName = profile.firstName;
+      if (profile.lastName !== undefined) user.profile.lastName = profile.lastName;
+      if (profile.phone !== undefined) user.profile.phone = profile.phone;
+      if (profile.dateOfBirth !== undefined) user.profile.dateOfBirth = profile.dateOfBirth;
+      if (profile.avatar !== undefined) user.profile.avatar = profile.avatar;
+      
+      if (profile.address) {
+        if (profile.address.street !== undefined) user.profile.address.street = profile.address.street;
+        if (profile.address.city !== undefined) user.profile.address.city = profile.address.city;
+        if (profile.address.state !== undefined) user.profile.address.state = profile.address.state;
+        if (profile.address.zipCode !== undefined) user.profile.address.zipCode = profile.address.zipCode;
+        if (profile.address.country !== undefined) user.profile.address.country = profile.address.country;
+      }
+    }
+
+    await user.save();
+
+    // Return updated user without password
+    const userResponse = user.toObject();
+    delete userResponse.password;
 
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      user
+      user: userResponse
     });
   } catch (error) {
     console.error('Update profile error:', error);
