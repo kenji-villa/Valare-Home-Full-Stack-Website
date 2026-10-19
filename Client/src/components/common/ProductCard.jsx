@@ -126,14 +126,16 @@ export default function ProductCard({
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart({
-      id: productId,
-      name: productName,
-      price: productPrice,
-      image: productImage,
-    });
-    setIsAdding(true);
-    setTimeout(() => setIsAdding(false), 1500);
+
+    addToCart(
+      {
+        id: productId,
+        name: productName,
+        price: productPrice,
+        image: productImage,
+      },
+      1,
+    );
   };
 
   const handleToggleFavorite = (e) => {
