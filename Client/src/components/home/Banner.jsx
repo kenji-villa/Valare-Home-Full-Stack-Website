@@ -21,7 +21,7 @@ export default function Banner() {
                 Seamless Beauty
               </h2>
               <a
-                href="#"
+                href="/services"
                 className="btn-secondary inline-flex items-center gap-2"
               >
                 Explore More <FaArrowRight className="w-5 h-5" />
@@ -46,7 +46,7 @@ export default function Banner() {
                 lifestyle.
               </p>
               <a
-                href="#"
+                href="/contact"
                 className="btn-secondary inline-flex items-center gap-2"
               >
                 Shop Sale <FaArrowRight className="w-5 h-5" />
