@@ -44,7 +44,7 @@ export default function Collections({
       <div className="container">
         <div className="flex justify-between items-center mb-8">
           <h2 className="section-title">Our Collections</h2>
-          <a href="#" className="btn-link">
+          <a href="office" className="btn-link">
             <span>Shop All Products</span>
             <i className="bx bx-right-arrow-alt text-xl"></i>
           </a>

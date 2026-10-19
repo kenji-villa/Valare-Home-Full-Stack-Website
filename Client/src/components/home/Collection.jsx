@@ -2,22 +2,22 @@ import { FaArrowRight } from "react-icons/fa";
 
 const collections = [
   {
-    title: "Summer Collection",
-    price: "Starting at ETB 40,000",
+    title: "Exclusive Collections",
+    price: "Specials Products to looks at ",
     image: "/assets/images/b2.jpg",
-    link: "#",
+    link: "/specials",
   },
   {
     title: "What's New?",
     price: "Crafted for Comfort",
     image: "/assets/images/bx2.jpg",
-    link: "#",
+    link: "/home-furniture",
   },
   {
     title: "Designed to Dwell",
-    price: "Starting at ETB 25,000",
+    price: "Fair and Discounted Prices",
     image: "/assets/images/bx3.jpg",
-    link: "#",
+    link: "/office",
   },
 ];
 
