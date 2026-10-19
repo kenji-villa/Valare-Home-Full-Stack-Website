@@ -111,46 +111,29 @@ export function CartProvider({ children }) {
       window.removeEventListener("wishlistUpdated", handleWishlistUpdate);
   }, []);
 
-  const addToCart = async (product) => {
-    const token = localStorage.getItem("authToken");
-
-    // Optimistic UI update
+  // If you sync cart with server:
+  const addToCart = async (product, quantity = 1) => {
+    // Update local state immediately
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
         return prev.map((item) =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item,
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity }];
     });
 
-    if (!token) return; // guest user - local only
-
-    try {
-      const response = await addToCartAPI(product.id, 1);
-      if (!response.success) {
-        throw new Error(response.message || "Failed to add to cart");
+    // Sync with server if logged in
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      try {
+        await addToCartAPI(product.id, quantity);
+      } catch (error) {
+        console.error("Failed to sync cart with server:", error);
       }
-      if (response.cart) {
-        setCartItems(mapServerCartToLocal(response.cart));
-      }
-    } catch (error) {
-      console.error("Error adding to cart on server:", error);
-      // Revert the optimistic update
-      setCartItems((prev) => {
-        const existing = prev.find((item) => item.id === product.id);
-        if (existing && existing.quantity > 1) {
-          return prev.map((item) =>
-            item.id === product.id
-              ? { ...item, quantity: item.quantity - 1 }
-              : item,
-          );
-        }
-        return prev.filter((item) => item.id !== product.id);
-      });
     }
   };
 
