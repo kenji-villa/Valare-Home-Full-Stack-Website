@@ -22,6 +22,7 @@ import Admin from "./pages/Admin";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import SearchResults from "./pages/SearchResults";
 import MyOrders from "./pages/MyOrders";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
             <Route path="/admin" element={<Admin />} />
             <Route path="/search" element={<SearchResults />} />
             <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/profile" element={<Profile />} />
             {/* Protected Routes - Require Login */}
             <Route
               path="/favorites"

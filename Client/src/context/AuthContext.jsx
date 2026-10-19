@@ -63,6 +63,11 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateUser = (updatedUserData) => {
+    setUser(updatedUserData);
+    localStorage.setItem("userData", JSON.stringify(updatedUserData));
+  };
+
   const mergeGuestCartIntoAccount = async () => {
     try {
       const guestCartRaw = localStorage.getItem("cart");
@@ -175,6 +180,7 @@ export function AuthProvider({ children }) {
         loadUserCart,
         isAdmin,
         isCustomer,
+        updateUser,
       }}
     >
       {children}
