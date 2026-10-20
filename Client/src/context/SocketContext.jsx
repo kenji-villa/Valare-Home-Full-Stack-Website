@@ -13,7 +13,7 @@ export function SocketProvider({ children }) {
     // Don't create multiple sockets
     if (socketRef.current) return;
 
-    console.log("🔌 Initializing socket connection...");
+    //console.log("🔌 Initializing socket connection...");
 
     const newSocket = io("http://localhost:3001", {
       transports: ["polling", "websocket"],
@@ -26,11 +26,11 @@ export function SocketProvider({ children }) {
     });
 
     newSocket.on("connect", () => {
-      console.log("✅ Socket connected:", newSocket.id);
+      //console.log("✅ Socket connected:", newSocket.id);
     });
 
     newSocket.on("disconnect", (reason) => {
-      console.log("🔌 Socket disconnected:", reason);
+      //console.log("🔌 Socket disconnected:", reason);
     });
 
     newSocket.on("connect_error", (error) => {
@@ -46,7 +46,7 @@ export function SocketProvider({ children }) {
     // ✅ Cleanup on unmount only
     return () => {
       if (socketRef.current) {
-        console.log("🧹 Closing socket connection");
+        //console.log("🧹 Closing socket connection");
         socketRef.current.close();
         socketRef.current = null;
       }
@@ -57,11 +57,11 @@ export function SocketProvider({ children }) {
   useEffect(() => {
     if (!socket || !user) return;
 
-    console.log("👤 Joining user room:", user._id);
+    //console.log("👤 Joining user room:", user._id);
     socket.emit("join-user-room", user._id);
 
     if (user.role === "admin") {
-      console.log("👑 Joining admin room");
+      //console.log("👑 Joining admin room");
       socket.emit("join-admin-room");
     }
   }, [socket, user]);
