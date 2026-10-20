@@ -5,15 +5,13 @@ import QuickActions from "./QuickActions";
 import TopProducts from "./TopProducts";
 import CustomerOverview from "./CustomerOverview";
 import OrderStatusChart from "./OrderStatusChart";
-import SalesTrendChart from "./SalesTrendChart";
+import SalesTrendChart from "./Salestrendchart";
 
-export default function Dashboard({ orders, products }) {
+export default function Dashboard({ orders, products, setActiveTab }) {
   return (
     <div className="space-y-6">
-      {/* Stats Cards Row */}
       <StatsCards orders={orders} products={products} />
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <SalesOverview orders={orders} />
@@ -23,7 +21,6 @@ export default function Dashboard({ orders, products }) {
         </div>
       </div>
 
-      {/* Second Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <SalesTrendChart orders={orders} />
@@ -33,13 +30,12 @@ export default function Dashboard({ orders, products }) {
         </div>
       </div>
 
-      {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <RecentOrders orders={orders} />
         </div>
         <div className="space-y-6">
-          <QuickActions />
+          <QuickActions setActiveTab={setActiveTab} />
           <CustomerOverview />
         </div>
       </div>
