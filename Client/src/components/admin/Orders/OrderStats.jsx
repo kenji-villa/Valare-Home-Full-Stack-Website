@@ -1,17 +1,17 @@
-export default function OrderStats({ orders }) {
-  const totalOrders = orders.length;
-  const pending = orders.filter(
-    (o) => (o.status || o.orderStatus) === "Pending",
-  ).length;
-  const processing = orders.filter(
-    (o) => (o.status || o.orderStatus) === "Processing",
-  ).length;
-  const shipped = orders.filter(
-    (o) => (o.status || o.orderStatus) === "Shipped",
-  ).length;
-  const delivered = orders.filter(
-    (o) => (o.status || o.orderStatus) === "Delivered",
-  ).length;
+export default function OrderStats({ orders, globalStats }) {
+  const totalOrders = globalStats ? globalStats.totalOrders : orders.length;
+  const pending = globalStats
+    ? globalStats.pending
+    : orders.filter((o) => (o.status || o.orderStatus) === "Pending").length;
+  const processing = globalStats
+    ? globalStats.processing
+    : orders.filter((o) => (o.status || o.orderStatus) === "Processing").length;
+  const shipped = globalStats
+    ? globalStats.shipped
+    : orders.filter((o) => (o.status || o.orderStatus) === "Shipped").length;
+  const delivered = globalStats
+    ? globalStats.delivered
+    : orders.filter((o) => (o.status || o.orderStatus) === "Delivered").length;
 
   const stats = [
     { label: "Total Orders", value: totalOrders, color: "text-gray-800" },
