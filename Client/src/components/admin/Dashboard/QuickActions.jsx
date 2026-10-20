@@ -1,6 +1,7 @@
 import { Plus, Eye, ShoppingCart, Users } from "lucide-react";
 
-export default function QuickActions() {
+// ✅ Accept setActiveTab
+export default function QuickActions({ setActiveTab }) {
   const actions = [
     {
       icon: Plus,
@@ -8,6 +9,7 @@ export default function QuickActions() {
       color: "text-[#DA4C2F]",
       bg: "bg-[#DA4C2F]/5",
       border: "border-[#DA4C2F]/20",
+      action: () => setActiveTab && setActiveTab("products"),
     },
     {
       icon: Eye,
@@ -15,6 +17,7 @@ export default function QuickActions() {
       color: "text-[#1a2d5e]",
       bg: "bg-[#1a2d5e]/5",
       border: "border-[#1a2d5e]/20",
+      action: () => setActiveTab && setActiveTab("analytics"),
     },
     {
       icon: ShoppingCart,
@@ -22,6 +25,7 @@ export default function QuickActions() {
       color: "text-emerald-600",
       bg: "bg-emerald-50",
       border: "border-emerald-200",
+      action: () => setActiveTab && setActiveTab("orders"),
     },
     {
       icon: Users,
@@ -29,6 +33,7 @@ export default function QuickActions() {
       color: "text-amber-600",
       bg: "bg-amber-50",
       border: "border-amber-200",
+      action: () => setActiveTab && setActiveTab("customers"),
     },
   ];
 
@@ -39,6 +44,7 @@ export default function QuickActions() {
         {actions.map((action, index) => (
           <button
             key={index}
+            onClick={action.action}
             className={`p-4 ${action.bg} border ${action.border} rounded-xl hover:scale-[1.03] transition-transform text-center group`}
           >
             <action.icon
