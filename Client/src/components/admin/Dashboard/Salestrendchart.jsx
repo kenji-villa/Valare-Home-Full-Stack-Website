@@ -24,12 +24,11 @@ const MONTH_LABELS = [
   "Dec",
 ];
 
-// Groups orders into the last 6 calendar months. Assumes each order has a
-// createdAt timestamp (standard with Mongoose { timestamps: true }) - if
-// none are dated yet, the chart shows an empty state instead of guessing.
 function buildTrendData(orders) {
   const now = new Date();
   const buckets = [];
+
+  // Create the last 6 month buckets
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     buckets.push({
@@ -38,13 +37,18 @@ function buildTrendData(orders) {
       revenue: 0,
     });
   }
+
   const byKey = Object.fromEntries(buckets.map((b) => [b.key, b]));
 
   let hasDatedOrders = false;
+
+  // Fill the buckets with real data
   orders.forEach((order) => {
-    if (!order.createdAt) return;
+    if (!order.createdAt || order.status === "Cancelled") return;
+
     const d = new Date(order.createdAt);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
+
     if (byKey[key]) {
       byKey[key].revenue += order.total || 0;
       hasDatedOrders = true;
@@ -81,7 +85,7 @@ export default function SalesTrendChart({ orders }) {
 
       {!hasDatedOrders ? (
         <p className="text-sm text-gray-400 py-20 text-center">
-          Not enough dated orders yet to plot a trend
+          No dated orders found to plot a trend
         </p>
       ) : (
         <div className="h-64 mt-4">
@@ -108,7 +112,7 @@ export default function SalesTrendChart({ orders }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                tickFormatter={(v) => `${v / 1000}k`}
+                tickFormatter={(v) => `ETB ${v / 1000}k`}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area

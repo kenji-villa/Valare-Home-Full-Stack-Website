@@ -26,18 +26,17 @@ function buildSalesData(orders) {
   }
 
   orders.forEach((order) => {
-    if (!order.createdAt) return;
-    const d = new Date(order.createdAt);
-    const month = d.getMonth();
-    const year = d.getFullYear();
-    const nowMonth = now.getMonth();
-    const nowYear = now.getFullYear();
-    const diff = (nowYear - year) * 12 + (nowMonth - month);
-    if (diff >= 0 && diff < 7) {
-      const index = 6 - diff;
-      if (buckets[index]) {
-        buckets[index].revenue += order.total || 0;
-      }
+    if (!order.createdAt || order.status === "Cancelled") return;
+
+    const orderDate = new Date(order.createdAt);
+    const orderMonth = orderDate.getMonth();
+    const orderYear = orderDate.getFullYear();
+
+    const bucket = buckets.find(
+      (b) => b.monthIndex === orderMonth && b.year === orderYear,
+    );
+    if (bucket) {
+      bucket.revenue += order.total || 0;
     }
   });
 
@@ -61,7 +60,8 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function SalesOverview({ orders }) {
   const data = useMemo(() => buildSalesData(orders), [orders]);
-  const hasData = data.some((d) => d.revenue > 0);
+  const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
+  const hasData = totalRevenue > 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -84,7 +84,7 @@ export default function SalesOverview({ orders }) {
 
       {!hasData ? (
         <p className="text-sm text-gray-400 py-16 text-center">
-          Not enough data to display sales overview
+          No revenue data available for the last 7 months
         </p>
       ) : (
         <div className="h-64">
@@ -117,10 +117,10 @@ export default function SalesOverview({ orders }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                tickFormatter={(v) => `$${v / 1000}k`}
+                tickFormatter={(v) => `ETB ${v / 1000}k`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={25000} stroke="#F1F3F9" strokeDasharray="3 3" />
+              <ReferenceLine y={15000} stroke="#F1F3F9" strokeDasharray="3 3" />
               <Area
                 type="monotone"
                 dataKey="revenue"
@@ -149,10 +149,9 @@ export default function SalesOverview({ orders }) {
             <TrendingUp className="w-4 h-4 text-[#DA4C2F]" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Average Sales</p>
+            <p className="text-xs text-gray-400">Average Sales / Month</p>
             <p className="text-sm font-semibold text-gray-800">
-              ETB{" "}
-              {data.reduce((sum, d) => sum + d.revenue, 0) / data.length || 0}
+              ETB {(totalRevenue / 7).toFixed(2)}
             </p>
           </div>
         </div>
@@ -161,14 +160,9 @@ export default function SalesOverview({ orders }) {
             <Target className="w-4 h-4 text-[#1a2d5e]" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Target Achievement</p>
+            <p className="text-xs text-gray-400">Total Revenue (7 Months)</p>
             <p className="text-sm font-semibold text-gray-800">
-              {Math.round(
-                (data.reduce((sum, d) => sum + d.revenue, 0) /
-                  data.reduce((sum, d) => sum + d.target, 0)) *
-                  100,
-              )}
-              %
+              ETB {totalRevenue.toFixed(2)}
             </p>
           </div>
         </div>
