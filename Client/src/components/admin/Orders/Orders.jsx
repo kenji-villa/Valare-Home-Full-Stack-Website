@@ -5,6 +5,7 @@ import {
   getAllOrders,
   updateOrderStatus,
   deleteOrder,
+  getOrderStats, // ✅ Import this
 } from "../../../services/orderService";
 
 export default function Orders({ orders, setOrders, darkMode }) {
@@ -12,7 +13,22 @@ export default function Orders({ orders, setOrders, darkMode }) {
   const [filter, setFilter] = useState("all");
   const [notification, setNotification] = useState(null);
 
-  // ✅ Use useCallback to prevent stale closures
+  const [globalStats, setGlobalStats] = useState(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await getOrderStats();
+        if (res.success) {
+          setGlobalStats(res.stats);
+        }
+      } catch (error) {
+        console.error("Failed to fetch global stats:", error);
+      }
+    };
+    fetchStats();
+  }, []);
+
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
@@ -20,13 +36,11 @@ export default function Orders({ orders, setOrders, darkMode }) {
       const response = await getAllOrders(filters);
 
       if (response.success) {
-        // ✅ Normalize status to ensure consistency
         const normalizedOrders = response.orders.map((order) => ({
           ...order,
           status: order.status || "Pending",
         }));
         setOrders(normalizedOrders);
-        console.log("📥 Admin fetched orders:", normalizedOrders.length);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -41,13 +55,9 @@ export default function Orders({ orders, setOrders, darkMode }) {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      console.log("🔄 Updating order:", orderId, "to:", newStatus);
-
       const response = await updateOrderStatus(orderId, newStatus);
-      console.log("✅ Update response:", response);
 
       if (response.success) {
-        // ✅ Update local state immediately
         setOrders(
           orders.map((o) =>
             (o._id || o.id) === orderId
@@ -57,11 +67,10 @@ export default function Orders({ orders, setOrders, darkMode }) {
         );
         showNotification(`Order status updated to ${newStatus}`, "success");
 
-        // ✅ Optionally refetch to ensure fresh data
-        // await fetchOrders();
+        const statsRes = await getOrderStats();
+        if (statsRes.success) setGlobalStats(statsRes.stats);
       }
     } catch (error) {
-      console.error("❌ Update status error:", error);
       showNotification(error.message || "Failed to update status", "error");
     }
   };
@@ -80,18 +89,14 @@ export default function Orders({ orders, setOrders, darkMode }) {
             orders.filter((order) => (order._id || order.id) !== orderId),
           );
           showNotification("Order deleted successfully", "success");
+
+          const statsRes = await getOrderStats();
+          if (statsRes.success) setGlobalStats(statsRes.stats);
         }
       } catch (error) {
-        console.error("Error deleting order:", error);
         showNotification("Failed to delete order", "error");
       }
     }
-  };
-
-  // ✅ Calculate counts for each status
-  const getStatusCount = (status) => {
-    if (status === "all") return orders.length;
-    return orders.filter((o) => o.status === status).length;
   };
 
   return (
@@ -106,7 +111,7 @@ export default function Orders({ orders, setOrders, darkMode }) {
         </div>
       )}
 
-      {/* Filter Tabs with Counts */}
+      {/* Filter Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {[
           "all",
@@ -126,16 +131,12 @@ export default function Orders({ orders, setOrders, darkMode }) {
             }`}
           >
             {status === "all" ? "All" : status}
-            <span
-              className={`ml-2 text-xs ${filter === status ? "text-white/80" : "text-gray-400"}`}
-            >
-              ({getStatusCount(status)})
-            </span>
           </button>
         ))}
       </div>
 
-      <OrderStats orders={orders} />
+      {/* Pass the globalStats to OrderStats */}
+      <OrderStats orders={orders} globalStats={globalStats} />
 
       {loading ? (
         <div className="flex justify-center py-12">
