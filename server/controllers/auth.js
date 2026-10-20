@@ -164,9 +164,7 @@ const getMe = async (req, res) => {
   }
 };
 
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
-// @access  Private
+
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
@@ -488,6 +486,30 @@ const clearWishlist = async (req, res) => {
   }
 };
 
+// @desc    Get all customers (admin only)
+// @route   GET /api/auth/customers
+// @access  Private/Admin
+const getAllCustomers = async (req, res) => {
+  try {
+    // Fetch users with the role 'customer', excluding their passwords
+    const customers = await User.find({ role: 'customer' })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      customers
+    });
+  } catch (error) {
+    console.error('Get customers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch customers',
+      error: error.message
+    });
+  }
+};
+
 
 module.exports = {
   register,
@@ -502,4 +524,5 @@ module.exports = {
   removeFromWishlist,
   toggleWishlist,
   clearWishlist,
+  getAllCustomers,
 };
