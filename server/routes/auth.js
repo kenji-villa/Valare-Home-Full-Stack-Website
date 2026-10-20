@@ -56,6 +56,7 @@ router.delete('/wishlist/clear', authenticateUser, authController.clearWishlist)
 
 // Admin only routes
 router.post('/create-admin', authenticateUser, authorizeAdmin, authController.createAdmin);
+router.get('/customers', authenticateUser, authorizeAdmin, authController.getAllCustomers);
 
 
 module.exports = router;
