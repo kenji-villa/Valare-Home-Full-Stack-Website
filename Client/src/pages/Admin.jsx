@@ -94,8 +94,14 @@ export default function Admin() {
 
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard orders={orders} products={products} />;
-      case "analytics": // Add this case
+        return (
+          <Dashboard
+            orders={orders}
+            products={products}
+            setActiveTab={setActiveTab}
+          />
+        );
+      case "analytics":
         return <Analytics />;
       case "products":
         return (
