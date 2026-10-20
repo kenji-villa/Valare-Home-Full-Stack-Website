@@ -202,3 +202,15 @@ export const clearCartAPI = async () => {
     throw error;
   }
 };
+
+// Get all customers (admin only)
+export const getAllCustomers = async () => {
+  try {
+    return await fetchWithAuth(`${API_BASE_URL}/auth/customers`, {
+      method: 'GET',
+    });
+  } catch (error) {
+    console.error('Get customers error:', error);
+    throw error;
+  }
+};
