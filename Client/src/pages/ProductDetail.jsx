@@ -443,12 +443,29 @@ export default function ProductDetail() {
     typeof product.price === "number"
       ? product.price.toFixed(2)
       : product.price;
-  const displayOriginalPrice = product.originalPrice
+  // Only treat the product as discounted when the original price is actually
+  // higher than the current price - otherwise show the current price alone
+  const toNumber = (value) =>
+    typeof value === "number"
+      ? value
+      : parseFloat(String(value ?? "").replace(/[^0-9.]/g, ""));
+  const isDiscounted =
+    toNumber(product.originalPrice) > toNumber(product.price);
+  const displayOriginalPrice = isDiscounted
     ? typeof product.originalPrice === "number"
       ? product.originalPrice.toFixed(2)
       : product.originalPrice
     : null;
-  const discount = product.discount || 0;
+  // Use the percent stored by the backend; fall back to calculating it for
+  // older products that were saved without one
+  const discount = isDiscounted
+    ? Number(product.discount) ||
+      Math.round(
+        ((toNumber(product.originalPrice) - toNumber(product.price)) /
+          toNumber(product.originalPrice)) *
+          100,
+      )
+    : 0;
 
   return (
     <>
@@ -485,7 +502,12 @@ export default function ProductDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
               {/* Product Gallery */}
               <div>
-                <div className="bg-gray-100 rounded-lg overflow-hidden mb-4">
+                <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4">
+                  {discount > 0 && (
+                    <span className="absolute top-4 right-4 z-10 bg-[#DA4C2F] text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-md">
+                      -{discount}%
+                    </span>
+                  )}
                   <img
                     src={getImageUrl(mainImage)}
                     alt={product.name}
@@ -517,11 +539,6 @@ export default function ProductDetail() {
 
               {/* Product Info */}
               <div>
-                {discount > 0 && (
-                  <span className="inline-block bg-[#DA4C2F] text-white text-sm font-bold px-3 py-1 rounded mb-3">
-                    -{discount}%
-                  </span>
-                )}
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-3">
                   {product.name}
                 </h1>
