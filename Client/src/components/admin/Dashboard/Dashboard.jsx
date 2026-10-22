@@ -5,7 +5,7 @@ import QuickActions from "./QuickActions";
 import TopProducts from "./TopProducts.jsx";
 import CustomerOverview from "./CustomerOverview.jsx";
 import OrderStatusChart from "./OrderStatusChart.jsx";
-import SalesTrendChart from "./Salestrendchart.";
+import SalesTrendChart from "./SalesTrendChart.jsx";
 
 export default function Dashboard({ orders, products, setActiveTab }) {
   return (
