@@ -53,7 +53,14 @@ export const getProducts = async (filters = {}) => {
     ? `${API_ENDPOINTS.PRODUCTS.ALL}?${queryParams}` 
     : API_ENDPOINTS.PRODUCTS.ALL;
   
-  const response = await fetch(url);
+  
+  const response = await fetch(url, {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    },
+    cache: 'no-store'
+  });
   return response.json();
 };
 

@@ -9,7 +9,10 @@ const { uploadProductImages } = require('../middlewares/upload');
 // Validation rules for product creation/update
 const productValidation = [
   body('name').notEmpty().withMessage('Product name is required'),
-  body('price').isNumeric().withMessage('Price must be a number').notEmpty().withMessage('Price is required'),
+  // Price OR (originalPrice + discount) is required - enforced in the controller
+  body('price').optional({ checkFalsy: true }).isNumeric().withMessage('Price must be a number'),
+  body('originalPrice').optional({ checkFalsy: true }).isNumeric().withMessage('Original price must be a number'),
+  body('discount').optional({ checkFalsy: true }).isFloat({ min: 0, max: 99 }).withMessage('Discount must be between 0 and 99'),
   body('category').notEmpty().withMessage('Category is required'),
   body('stock').optional().isNumeric().withMessage('Stock must be a number'),
   body('images').optional().isArray().withMessage('Images must be an array'),
