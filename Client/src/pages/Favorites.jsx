@@ -13,6 +13,7 @@ export default function Favorites() {
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Fetch favorite products from API
   useEffect(() => {
@@ -57,6 +58,18 @@ export default function Favorites() {
     }
   };
 
+  <ConfirmModal
+    isOpen={showClearConfirm}
+    onClose={() => setShowClearConfirm(false)}
+    onConfirm={() => {
+      favoriteProducts.forEach((p) => toggleFavorite(p._id));
+      addToast("Favorites cleared", "success");
+    }}
+    title="Clear Favorites"
+    message="Are you sure you want to remove all items from your favorites?"
+    confirmText="Clear All"
+  />;
+
   return (
     <>
       <Header />
@@ -74,11 +87,7 @@ export default function Favorites() {
               </p>
             </div>
             {favoriteProducts.length > 0 && (
-              <button
-                onClick={clearAllFavorites}
-                className="text-red-500 hover:text-red-700 transition-colors flex items-center gap-2 text-sm font-medium bg-white px-4 py-2 rounded-lg shadow-sm"
-              >
-                <Trash2 className="w-4 h-4" />
+              <button onClick={() => setShowClearConfirm(true)}>
                 Clear All
               </button>
             )}

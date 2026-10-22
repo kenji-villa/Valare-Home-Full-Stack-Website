@@ -101,8 +101,9 @@ export default function ProductForm({
     });
 
     if (validFiles.length !== files.length) {
-      alert(
+      addToast(
         "Some files were invalid. Please use JPG, PNG, GIF, or WEBP under 5MB.",
+        "error",
       );
       return;
     }
