@@ -27,6 +27,8 @@ export default function HomeFurniture() {
     ratings: [],
     search: "",
   });
+  // Highest product price, so the default price filter never hides a product
+  const [defaultMaxPrice, setDefaultMaxPrice] = useState(10000);
   const [sortBy, setSortBy] = useState("featured");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
@@ -73,6 +75,18 @@ export default function HomeFurniture() {
         setProducts(homeProducts);
         setFilteredProducts(homeProducts);
         setTotalProducts(homeProducts.length);
+
+        // Open the price filter up to the most expensive product, instead of
+        // a hard-coded cap that silently hides anything priced above it
+        const highestPrice = Math.ceil(
+          Math.max(0, ...homeProducts.map((p) => p.price || 0)),
+        );
+        const maxPrice = highestPrice || 10000;
+        setDefaultMaxPrice(maxPrice);
+        setFilters((prev) => ({
+          ...prev,
+          priceRange: { ...prev.priceRange, max: maxPrice },
+        }));
 
         // Extract unique subcategories from home products
         // Look at subCategory first, then fallback to category
@@ -263,7 +277,7 @@ export default function HomeFurniture() {
   const resetFilters = () => {
     setFilters({
       categories: [],
-      priceRange: { min: 0, max: 10000 },
+      priceRange: { min: 0, max: defaultMaxPrice },
       colors: [],
       materials: [],
       ratings: [],

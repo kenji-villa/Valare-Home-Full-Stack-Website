@@ -81,9 +81,6 @@ export default function ProductCard({
   const productRating = rating || averageRating || 0;
   const productReviews = reviews || reviewCount || 0;
 
-  // Badge text like "-20%". Uses the percent from the backend (a number such as
-  // 20, or a string such as "-20%"); falls back to calculating it from the
-  // prices for products saved without one. No discount -> no badge.
   const toNum = (v) => parseFloat(String(v ?? "").replace(/[^0-9.]/g, ""));
   let displayDiscount = null;
   const discountNumber = toNum(discount);

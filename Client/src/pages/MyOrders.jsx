@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
+import { useToast } from "../context/ToastContext";
+import ConfirmModal from "../components/common/ConfirmModal";
+
 import {
   Package,
   Clock,
@@ -67,6 +70,8 @@ export default function MyOrders() {
   const [cancelling, setCancelling] = useState(null);
   const [filter, setFilter] = useState("all");
   const [liveUpdate, setLiveUpdate] = useState(null);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const { addToast } = useToast();
 
   // Fetch orders
   const fetchOrders = useCallback(async (showRefreshIndicator = false) => {
@@ -170,51 +175,23 @@ export default function MyOrders() {
     return () => window.removeEventListener("focus", handleFocus);
   }, [user, fetchOrders]);
 
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+  const handleCancelOrder = async () => {
+    if (!orderToCancel) return;
 
     try {
-      setCancelling(orderId);
-      const response = await cancelOrder(orderId);
-
-      console.log("🚫 Cancel response:", response);
-
-      if (response.success && response.order) {
-        // ✅ Update with the SERVER's response, not just a local change
-        setOrders((prevOrders) =>
-          prevOrders.map((o) =>
-            o._id === orderId
-              ? {
-                  ...o,
-                  status: response.order.status,
-                  updatedAt: response.order.updatedAt,
-                }
-              : o,
+      const response = await cancelOrder(orderToCancel);
+      if (response.success) {
+        setOrders(
+          orders.map((o) =>
+            o._id === orderToCancel ? { ...o, status: "Cancelled" } : o,
           ),
         );
-
-        // Update selected order if it's open
-        setSelectedOrder((prev) =>
-          prev && prev._id === orderId
-            ? { ...prev, status: response.order.status }
-            : prev,
-        );
-
-        // Optional: show a nice toast
-        setLiveUpdate({
-          orderId: response.order.orderNumber,
-          status: "Cancelled",
-          message: `Order ${response.order.orderNumber} has been cancelled`,
-        });
-        setTimeout(() => setLiveUpdate(null), 5000);
-      } else {
-        throw new Error(response.message || "Failed to cancel order");
+        addToast("Order cancelled successfully", "success");
       }
     } catch (error) {
-      console.error("❌ Cancel error:", error);
-      alert(error.message || "Failed to cancel order");
+      addToast(error.message || "Failed to cancel order", "error");
     } finally {
-      setCancelling(null);
+      setOrderToCancel(null);
     }
   };
 
@@ -240,6 +217,15 @@ export default function MyOrders() {
       </>
     );
   }
+
+  <ConfirmModal
+    isOpen={!!orderToCancel}
+    onClose={() => setOrderToCancel(null)}
+    onConfirm={handleCancelOrder}
+    title="Cancel Order"
+    message="Are you sure you want to cancel this order? This action cannot be undone."
+    confirmText="Yes, Cancel Order"
+  />;
 
   return (
     <>

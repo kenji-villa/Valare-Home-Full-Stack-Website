@@ -27,6 +27,8 @@ export default function Office() {
     ratings: [],
     search: "",
   });
+  // Highest product price, so the default price filter never hides a product
+  const [defaultMaxPrice, setDefaultMaxPrice] = useState(5000);
   const [sortBy, setSortBy] = useState("featured");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
@@ -70,6 +72,18 @@ export default function Office() {
         );
         setProducts(officeProducts);
         setFilteredProducts(officeProducts);
+
+        // Open the price filter up to the most expensive product, instead of
+        // a hard-coded cap that silently hides anything priced above it
+        const highestPrice = Math.ceil(
+          Math.max(0, ...officeProducts.map((p) => p.price || 0)),
+        );
+        const maxPrice = highestPrice || 5000;
+        setDefaultMaxPrice(maxPrice);
+        setFilters((prev) => ({
+          ...prev,
+          priceRange: { ...prev.priceRange, max: maxPrice },
+        }));
 
         // Extract unique subcategories from office products
         // Look at subCategory first, then fallback to category
@@ -528,7 +542,7 @@ export default function Office() {
                       onClick={() => {
                         setFilters({
                           categories: [],
-                          priceRange: { min: 0, max: 5000 },
+                          priceRange: { min: 0, max: defaultMaxPrice },
                           colors: [],
                           materials: [],
                           ratings: [],

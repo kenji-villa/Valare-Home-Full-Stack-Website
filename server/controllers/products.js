@@ -11,12 +11,6 @@ const toNum = (v) => {
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-// The admin can enter either:
-//   (a) originalPrice + price (the discounted price) -> discount % is calculated
-//   (b) originalPrice + discount %                    -> price is calculated
-//   (c) just price                                    -> no discount
-// If price and discount are both given, price wins.
-// Returns { price, originalPrice, discount } or { error }.
 const resolvePricing = ({ price, originalPrice, discount }) => {
   const p = toNum(price);
   const o = toNum(originalPrice);
@@ -231,7 +225,7 @@ const createProduct = async (req, res) => {
       productData.coverImage = productData.images[0];
     }
     
-    // Work out price / originalPrice / discount from whichever the admin entered
+    
     const pricing = resolvePricing(productData);
     if (pricing.error) {
       return res.status(400).json({
@@ -323,8 +317,6 @@ const updateProduct = async (req, res) => {
       const priceChanged = sentPrice > 0 && sentPrice !== product.price;
       const discountChanged =
         sentDiscount > 0 && sentDiscount !== (product.discount || 0);
-      // Edit forms usually resend every field, so only use the discount % when
-      // it was the field the admin actually changed
       const useDiscount = discountChanged && !priceChanged;
 
       const pricing = resolvePricing({
