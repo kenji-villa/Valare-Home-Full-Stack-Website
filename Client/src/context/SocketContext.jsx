@@ -13,9 +13,16 @@ export function SocketProvider({ children }) {
     // Don't create multiple sockets
     if (socketRef.current) return;
 
-    //console.log("🔌 Initializing socket connection...");
+    // ✅ Dynamically determine the backend URL
+    // If VITE_API_URL is set (e.g., "https://velare-backend.onrender.com/api"),
+    // we strip the "/api" to get the base URL for the socket connection.
+    const backendUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace("/api", "")
+      : "http://localhost:3001";
 
-    const newSocket = io("http://localhost:3001", {
+    // console.log("🔌 Connecting socket to:", backendUrl);
+
+    const newSocket = io(backendUrl, {
       transports: ["polling", "websocket"],
       autoConnect: true,
       reconnection: true,
@@ -26,11 +33,11 @@ export function SocketProvider({ children }) {
     });
 
     newSocket.on("connect", () => {
-      //console.log("✅ Socket connected:", newSocket.id);
+      // console.log("✅ Socket connected:", newSocket.id);
     });
 
     newSocket.on("disconnect", (reason) => {
-      //console.log("🔌 Socket disconnected:", reason);
+      // console.log("🔌 Socket disconnected:", reason);
     });
 
     newSocket.on("connect_error", (error) => {
@@ -43,25 +50,23 @@ export function SocketProvider({ children }) {
     socketRef.current = newSocket;
     setSocket(newSocket);
 
-    // ✅ Cleanup on unmount only
     return () => {
       if (socketRef.current) {
-        //console.log("🧹 Closing socket connection");
+        // console.log("🧹 Closing socket connection");
         socketRef.current.close();
         socketRef.current = null;
       }
     };
-  }, []); // ✅ Empty dependency array - only run once
+  }, []);
 
-  // ✅ Join rooms separately when user changes (doesn't recreate socket)
   useEffect(() => {
     if (!socket || !user) return;
 
-    //console.log("👤 Joining user room:", user._id);
+    // console.log("👤 Joining user room:", user._id);
     socket.emit("join-user-room", user._id);
 
     if (user.role === "admin") {
-      //console.log("👑 Joining admin room");
+      // console.log("👑 Joining admin room");
       socket.emit("join-admin-room");
     }
   }, [socket, user]);
