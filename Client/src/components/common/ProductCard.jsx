@@ -24,12 +24,12 @@ export default function ProductCard({
 }) {
   const { addToCart, toggleFavorite, favorites } = useCart();
   const navigate = useNavigate();
-  const isFavorite = favorites.includes(id);
   const [isAdding, setIsAdding] = useState(false);
 
   // Use the correct ID
   const productId = _id || id;
   const productName = name || "Product";
+  const isFavorite = favorites.includes(productId);
 
   // Handle price formatting - check if price is a number or string
   let productPrice = price;
@@ -81,14 +81,19 @@ export default function ProductCard({
   const productRating = rating || averageRating || 0;
   const productReviews = reviews || reviewCount || 0;
 
-  // Calculate discount if not provided but originalPrice is higher than price
-  let displayDiscount = discount;
-  if (!displayDiscount && originalPrice && price && originalPrice > price) {
-    const discountPercent = Math.round(
-      ((originalPrice - price) / originalPrice) * 100,
-    );
-    if (discountPercent > 0) {
-      displayDiscount = `-${discountPercent}%`;
+  // Badge text like "-20%". Uses the percent from the backend (a number such as
+  // 20, or a string such as "-20%"); falls back to calculating it from the
+  // prices for products saved without one. No discount -> no badge.
+  const toNum = (v) => parseFloat(String(v ?? "").replace(/[^0-9.]/g, ""));
+  let displayDiscount = null;
+  const discountNumber = toNum(discount);
+  if (discountNumber > 0) {
+    displayDiscount = `-${discountNumber}%`;
+  } else {
+    const orig = toNum(originalPrice);
+    const current = toNum(price);
+    if (orig > current && current > 0) {
+      displayDiscount = `-${Math.round(((orig - current) / orig) * 100)}%`;
     }
   }
 
@@ -126,16 +131,14 @@ export default function ProductCard({
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-
-    addToCart(
-      {
-        id: productId,
-        name: productName,
-        price: productPrice,
-        image: productImage,
-      },
-      1,
-    );
+    addToCart({
+      id: productId,
+      name: productName,
+      price: productPrice,
+      image: productImage,
+    });
+    setIsAdding(true);
+    setTimeout(() => setIsAdding(false), 1500);
   };
 
   const handleToggleFavorite = (e) => {
@@ -174,7 +177,7 @@ export default function ProductCard({
           }}
         />
 
-        {discount && <span className="badge">{discount}</span>}
+        {displayDiscount && <span className="badge">{displayDiscount}</span>}
 
         {/* Action buttons - slide from right */}
         <div className="product-actions">
