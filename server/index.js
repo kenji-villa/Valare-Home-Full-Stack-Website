@@ -22,10 +22,13 @@ const server = http.createServer(app);
 
 //CORS must be configured BEFORE routes
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+  origin: [
+    "http://localhost:3000", 
+    process.env.CLIENT_URL
+  ].filter(Boolean),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 //Prevent server crashes
@@ -62,8 +65,11 @@ app.use('/api/cart', cartRoutes);  //
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
-    methods: ['GET', 'POST'],
+    origin: [
+      "http://localhost:3000", 
+      process.env.CLIENT_URL
+    ].filter(Boolean),
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
