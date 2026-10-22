@@ -29,17 +29,7 @@ const allowedOrigins = [
 
 //CORS must be configured BEFORE routes
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log("Blocked by CORS:", origin); 
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allows all origins dynamically
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -51,7 +41,7 @@ app.use(cors(corsOptions));
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: "*", // Allow everything
     methods: ["GET", "POST"],
     credentials: true,
   },
