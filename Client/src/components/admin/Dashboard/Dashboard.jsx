@@ -2,10 +2,10 @@ import StatsCards from "./StatsCards";
 import SalesOverview from "./SalesOverview";
 import RecentOrders from "./RecentOrders";
 import QuickActions from "./QuickActions";
-import TopProducts from "./TopProducts";
-import CustomerOverview from "./CustomerOverview";
-import OrderStatusChart from "./OrderStatusChart";
-import SalesTrendChart from "./Salestrendchart";
+import TopProducts from "./TopProducts.jsx";
+import CustomerOverview from "./CustomerOverview.jsx";
+import OrderStatusChart from "./OrderStatusChart.jsx";
+import SalesTrendChart from "./Salestrendchart.";
 
 export default function Dashboard({ orders, products, setActiveTab }) {
   return (
