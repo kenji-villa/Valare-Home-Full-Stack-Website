@@ -2,6 +2,66 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const { validationResult } = require('express-validator');
 
+// ---- Pricing helpers -------------------------------------------------------
+const toNum = (v) => {
+  if (v === undefined || v === null || v === '') return NaN;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+};
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// The admin can enter either:
+//   (a) originalPrice + price (the discounted price) -> discount % is calculated
+//   (b) originalPrice + discount %                    -> price is calculated
+//   (c) just price                                    -> no discount
+// If price and discount are both given, price wins.
+// Returns { price, originalPrice, discount } or { error }.
+const resolvePricing = ({ price, originalPrice, discount }) => {
+  const p = toNum(price);
+  const o = toNum(originalPrice);
+  const d = toNum(discount);
+
+  const hasPrice = p > 0;
+  const hasOriginal = o > 0;
+  const hasDiscount = d > 0;
+
+  if (hasOriginal && hasPrice) {
+    if (p > o) {
+      return { error: 'Original price must be higher than the current price' };
+    }
+    return {
+      price: p,
+      originalPrice: o,
+      discount: p < o ? Math.round(((o - p) / o) * 100) : 0
+    };
+  }
+
+  if (hasOriginal && hasDiscount) {
+    if (d >= 100) return { error: 'Discount must be less than 100%' };
+    return {
+      price: round2(o * (1 - d / 100)),
+      originalPrice: o,
+      discount: d
+    };
+  }
+
+  if (hasDiscount && !hasOriginal) {
+    return { error: 'Original price is required to apply a discount' };
+  }
+
+  if (hasPrice) {
+    return { price: p, originalPrice: null, discount: 0 };
+  }
+
+  if (hasOriginal) {
+    return { price: o, originalPrice: null, discount: 0 };
+  }
+
+  return { error: 'Enter a price, or an original price with a discount' };
+};
+// ---------------------------------------------------------------------------
+
 // @desc    Get all products with filtering, sorting, pagination
 // @route   GET /api/products
 // @access  Public
@@ -171,11 +231,20 @@ const createProduct = async (req, res) => {
       productData.coverImage = productData.images[0];
     }
     
-    // Calculate discount if originalPrice is provided
-    if (productData.originalPrice && productData.originalPrice > productData.price) {
-      productData.discount = Math.round(((productData.originalPrice - productData.price) / productData.originalPrice) * 100);
+    // Work out price / originalPrice / discount from whichever the admin entered
+    const pricing = resolvePricing(productData);
+    if (pricing.error) {
+      return res.status(400).json({
+        success: false,
+        message: pricing.error
+      });
+    }
+    productData.price = pricing.price;
+    productData.discount = pricing.discount;
+    if (pricing.originalPrice === null) {
+      delete productData.originalPrice;
     } else {
-      productData.discount = 0;
+      productData.originalPrice = pricing.originalPrice;
     }
     
     // Set status based on stock
@@ -244,16 +313,42 @@ const updateProduct = async (req, res) => {
     
     const updateData = req.body;
     
-    // Recalculate discount if price or originalPrice changed
-    if (updateData.price || updateData.originalPrice) {
-      const newPrice = updateData.price || product.price;
-      const newOriginalPrice = updateData.originalPrice || product.originalPrice;
-      
-      if (newOriginalPrice && newOriginalPrice > newPrice) {
-        updateData.discount = Math.round(((newOriginalPrice - newPrice) / newOriginalPrice) * 100);
-      } else {
-        updateData.discount = 0;
+    // Recalculate pricing if any price field was sent
+    const pricingTouched = ['price', 'originalPrice', 'discount'].some(
+      (k) => updateData[k] !== undefined
+    );
+    if (pricingTouched) {
+      const sentPrice = toNum(updateData.price);
+      const sentDiscount = toNum(updateData.discount);
+      const priceChanged = sentPrice > 0 && sentPrice !== product.price;
+      const discountChanged =
+        sentDiscount > 0 && sentDiscount !== (product.discount || 0);
+      // Edit forms usually resend every field, so only use the discount % when
+      // it was the field the admin actually changed
+      const useDiscount = discountChanged && !priceChanged;
+
+      const pricing = resolvePricing({
+        originalPrice:
+          updateData.originalPrice !== undefined
+            ? updateData.originalPrice
+            : product.originalPrice,
+        price: useDiscount
+          ? undefined
+          : sentPrice > 0
+            ? updateData.price
+            : product.price,
+        discount: useDiscount ? updateData.discount : undefined
+      });
+
+      if (pricing.error) {
+        return res.status(400).json({
+          success: false,
+          message: pricing.error
+        });
       }
+      updateData.price = pricing.price;
+      updateData.originalPrice = pricing.originalPrice;
+      updateData.discount = pricing.discount;
     }
     
     // Update status based on stock
