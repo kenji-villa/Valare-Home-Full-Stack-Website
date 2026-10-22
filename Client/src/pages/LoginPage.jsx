@@ -2,11 +2,13 @@ import { Eye, EyeOff, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const { addToast } = useToast();
   const [formData, setFormData] = useState({
     loginEmail: "",
     loginPassword: "",
@@ -129,7 +131,7 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed");
       }
 
-      alert(`Welcome ${data.user.username}!`);
+      addToast(`Welcome back, ${data.user.username}!`, "success");
 
       // AuthContext.login stores the token/user, loads the real wishlist
       // from the database, and navigates based on role.
