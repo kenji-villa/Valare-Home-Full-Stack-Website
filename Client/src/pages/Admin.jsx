@@ -21,6 +21,8 @@ export default function Admin() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
   // Check if user is admin
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function Admin() {
 
         // Fetch orders from API
         const token = localStorage.getItem("authToken");
-        const orderResponse = await fetch("http://localhost:3001/api/orders", {
+        const orderResponse = await fetch(`${API_BASE_URL}/orders`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

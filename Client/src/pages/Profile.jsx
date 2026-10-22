@@ -17,6 +17,8 @@ import {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, token, updateUser } = useAuth();
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
   // State for the user data displayed on screen
   const [profileData, setProfileData] = useState({
@@ -96,7 +98,7 @@ export default function Profile() {
   const handleSave = async (section) => {
     setIsSaving(true);
     try {
-      const response = await fetch("http://localhost:3001/api/auth/profile", {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -39,6 +39,8 @@ export default function ProductDetail() {
   const [isAddedToCart, setIsAddedToCart] = useState(false);
   const [mainImage, setMainImage] = useState("");
   const [thumbnails, setThumbnails] = useState([]);
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
   // Review states
   const [reviewData, setReviewData] = useState({
@@ -218,7 +220,7 @@ export default function ProductDetail() {
 
       const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `http://localhost:3001/api/products/${product._id}/rate`,
+        `${API_BASE_URL}/products/${product._id}/rate`,
         {
           method: "POST",
           headers: {

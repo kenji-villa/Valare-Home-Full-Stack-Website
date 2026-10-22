@@ -128,16 +128,15 @@ export default function ProductForm({
       });
 
       const token = localStorage.getItem("authToken");
-      const response = await fetch(
-        "http://localhost:3001/api/products/upload",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
+      const API_BASE_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+      const response = await fetch(`${API_BASE_URL}/products/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: formData,
+      });
 
       const data = await response.json();
 
@@ -222,7 +221,7 @@ export default function ProductForm({
       if (product) {
         // Update existing product
         const response = await fetch(
-          `http://localhost:3001/api/products/${product._id}`,
+          `${API_BASE_URL}/products/${product._id}`,
           {
             method: "PUT",
             headers: {
@@ -239,7 +238,7 @@ export default function ProductForm({
         onSave(savedProduct);
       } else {
         // Create new product
-        const response = await fetch("http://localhost:3001/api/products", {
+        const response = await fetch(`${API_BASE_URL}/products`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -9,6 +9,8 @@ export default function LoginPage() {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const { addToast } = useToast();
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
   const [formData, setFormData] = useState({
     loginEmail: "",
     loginPassword: "",
@@ -116,7 +118,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrors({});
     try {
-      const response = await fetch("http://localhost:3001/api/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -151,7 +153,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrors({});
     try {
-      const response = await fetch("http://localhost:3001/api/auth/register", {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
