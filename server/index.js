@@ -20,16 +20,43 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+// Define allowed origins
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173", // Vite default
+  process.env.CLIENT_URL,  // Your Vercel URL from Render Env Vars
+];
+
 //CORS must be configured BEFORE routes
 const corsOptions = {
-  origin: [
-    "http://localhost:3000", 
-    process.env.CLIENT_URL
-  ].filter(Boolean),
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log("Blocked by CORS:", origin); 
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
+
+
+app.use(cors(corsOptions));
+
+// Socket.IO setup
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
 
 //Prevent server crashes
 process.on('uncaughtException', (err) => {
@@ -44,7 +71,7 @@ process.on('unhandledRejection', (reason, promise) => {
   // Don't exit - keep the server running
 });
 
-app.use(cors(corsOptions));
+
 
 // Handle preflight requests explicitly (safety net)
 app.options('*', cors(corsOptions));
@@ -62,17 +89,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);  // 
 
-// Socket.IO setup
-const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://localhost:3000", 
-      process.env.CLIENT_URL
-    ].filter(Boolean),
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
+
 
 app.set('io', io);
 
