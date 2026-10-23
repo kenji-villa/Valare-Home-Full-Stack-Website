@@ -6,6 +6,8 @@ import ProductCard from "../components/common/ProductCard";
 import { Heart, ShoppingBag, Trash2, ArrowLeft } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { getProducts } from "../services/productService";
+import ConfirmModal from "../components/common/ConfirmModal";
+import { useToast } from "../context/ToastContext";
 
 export default function Favorites() {
   const { favorites, toggleFavorite, clearFavorites } = useCart();
@@ -14,6 +16,8 @@ export default function Favorites() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const { addToast } = useToast();
 
   // Fetch favorite products from API
   useEffect(() => {
@@ -57,18 +61,6 @@ export default function Favorites() {
       clearFavorites();
     }
   };
-
-  <ConfirmModal
-    isOpen={showClearConfirm}
-    onClose={() => setShowClearConfirm(false)}
-    onConfirm={() => {
-      favoriteProducts.forEach((p) => toggleFavorite(p._id));
-      addToast("Favorites cleared", "success");
-    }}
-    title="Clear Favorites"
-    message="Are you sure you want to remove all items from your favorites?"
-    confirmText="Clear All"
-  />;
 
   return (
     <>
@@ -151,6 +143,18 @@ export default function Favorites() {
           )}
         </div>
       </main>
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => {
+          handleClearAll();
+          setShowClearConfirm(false);
+        }}
+        title="Clear Favorites"
+        message="Are you sure you want to remove all items from your favorites?"
+        confirmText="Clear All"
+        isDestructive={true}
+      />
       <Footer />
     </>
   );
