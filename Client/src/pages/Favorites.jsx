@@ -56,10 +56,10 @@ export default function Favorites() {
     toggleFavorite(productId);
   };
 
-  const clearAllFavorites = () => {
-    if (window.confirm("Remove all items from favorites?")) {
-      clearFavorites();
-    }
+  const handleClearAll = () => {
+    favoriteProducts.forEach((p) => toggleFavorite(p._id || p.id));
+    addToast("Favorites cleared", "success");
+    setShowClearConfirm(false);
   };
 
   return (
