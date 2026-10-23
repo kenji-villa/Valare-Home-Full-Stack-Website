@@ -467,11 +467,13 @@ Contributions, suggestions, bug reports, and feature requests are welcome.
 
 ---
 
+
 ## 📄 License
 
-Add a `LICENSE` file to the repository before declaring a specific open-source license.
+This project is licensed under the [MIT License](LICENSE).
 
-If you choose the MIT License, include the official MIT license text and update this section accordingly.
+You are free to use, copy, modify, distribute, and sublicense this software, subject to the terms and conditions of the MIT License.
+
 
 ---
 
