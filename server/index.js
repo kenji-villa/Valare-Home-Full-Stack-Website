@@ -14,6 +14,7 @@ const cartRoutes = require('./routes/cart');
 
 const notFound = require('./middlewares/notFound');
 const errorHandler = require('./middlewares/errorHandler');
+const compression = require('compression');
 
 dotenv.config();
 
@@ -61,7 +62,8 @@ process.on('unhandledRejection', (reason, promise) => {
   // Don't exit - keep the server running
 });
 
-
+app.use(compression()); 
+app.use(cors(corsOptions));
 
 // Handle preflight requests explicitly (safety net)
 app.options('*', cors(corsOptions));

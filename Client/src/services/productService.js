@@ -57,11 +57,10 @@ export const getProducts = async (filters = {}) => {
   
   
   const response = await fetch(url, {
+    method: 'GET',
     headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    },
-    cache: 'no-store'
+      'Cache-Control': 'max-age=300', 
+    }
   });
   return response.json();
 };

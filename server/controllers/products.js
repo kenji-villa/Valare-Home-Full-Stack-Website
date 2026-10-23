@@ -62,7 +62,7 @@ const resolvePricing = ({ price, originalPrice, discount }) => {
 const getProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
+    const limit = parseInt(req.query.limit) || 12; 
     const skip = (page - 1) * limit;
     const sort = req.query.sort || '-createdAt';
     
@@ -125,6 +125,7 @@ const getProducts = async (req, res) => {
     }
     
     const products = await Product.find(filter)
+      .select('name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock isFeatured') 
       .sort(sortObj)
       .skip(skip)
       .limit(limit);

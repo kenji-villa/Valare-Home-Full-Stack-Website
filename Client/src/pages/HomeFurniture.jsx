@@ -53,7 +53,7 @@ export default function HomeFurniture() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await getProducts({ limit: 100 });
+      const response = await getProducts({ limit: 12 });
       if (response.success) {
         // Ensure rating data is included for all products
         const productsWithRating = response.products.map((p) => ({
