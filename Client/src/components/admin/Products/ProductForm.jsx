@@ -39,6 +39,8 @@ export default function ProductForm({
   const [imagePreviews, setImagePreviews] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const API_BASE_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
   useEffect(() => {
     if (product) {
@@ -128,8 +130,6 @@ export default function ProductForm({
       });
 
       const token = localStorage.getItem("authToken");
-      const API_BASE_URL =
-        import.meta.env.VITE_API_URL || "http://localhost:3001/api";
       const response = await fetch(`${API_BASE_URL}/products/upload`, {
         method: "POST",
         headers: {
