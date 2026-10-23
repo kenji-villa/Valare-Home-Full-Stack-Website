@@ -49,32 +49,15 @@ export default function Office() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await getProducts({ limit: 12 });
-      if (response.success) {
-        // Ensure rating data is included
-        const productsWithRating = response.products.map((p) => ({
-          ...p,
-          rating: p.averageRating || p.rating || 0,
-          reviews: p.reviewCount || p.reviews || 0,
-        }));
 
-        // Filter products to only show Office category and its subcategories
-        const officeProducts = response.products.filter(
-          (product) =>
-            product.category === "Office" ||
-            product.category === "office" ||
-            product.subcategory === "Chairs" ||
-            product.subcategory === "Storage" ||
-            product.subcategory === "Outdoor" ||
-            product.subcategory === "Accessories" ||
-            product.subcategory === "Conference" ||
-            product.subcategory === "Desks",
-        );
+      // ✅ Fetch specifically Office products
+      const response = await getProducts({ category: "Office", limit: 12 });
+
+      if (response.success) {
+        const officeProducts = response.products;
         setProducts(officeProducts);
         setFilteredProducts(officeProducts);
 
-        // Open the price filter up to the most expensive product, instead of
-        // a hard-coded cap that silently hides anything priced above it
         const highestPrice = Math.ceil(
           Math.max(0, ...officeProducts.map((p) => p.price || 0)),
         );
@@ -85,8 +68,6 @@ export default function Office() {
           priceRange: { ...prev.priceRange, max: maxPrice },
         }));
 
-        // Extract unique subcategories from office products
-        // Look at subCategory first, then fallback to category
         const cats = [
           ...new Set(
             officeProducts
@@ -94,23 +75,16 @@ export default function Office() {
               .filter(Boolean),
           ),
         ];
+        const filteredCats = cats.filter((cat) => cat !== "Office");
 
-        // Filter out 'Office' from categories
-        const filteredCats = cats.filter(
-          (cat) =>
-            cat !== "Office" && cat !== "office" && !cat.includes("Office"),
-        );
-
-        if (filteredCats.length > 0) {
-          setOfficeSubcategories(filteredCats);
-        } else {
+        if (filteredCats.length > 0) setOfficeSubcategories(filteredCats);
+        else
           setOfficeSubcategories([
             "Chairs",
             "Storage",
             "Outdoor",
             "Accessories",
           ]);
-        }
       }
     } catch (error) {
       console.error("Error fetching office products:", error);

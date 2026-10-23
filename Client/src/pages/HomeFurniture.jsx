@@ -50,34 +50,21 @@ export default function HomeFurniture() {
     }
   }, [searchParams]);
 
+  // Replace the fetchProducts function in HomeFurniture.jsx
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await getProducts({ limit: 12 });
+
+      // Fetch specifically Home products with a limit
+      const response = await getProducts({ category: "Home", limit: 12 });
+
       if (response.success) {
-        // Ensure rating data is included for all products
-        const productsWithRating = response.products.map((p) => ({
-          ...p,
-          rating: p.averageRating || p.rating || 0,
-          reviews: p.reviewCount || p.reviews || 0,
-        }));
-
-        // Filter to ONLY show Home products (exclude Office)
-        const homeProducts = response.products.filter(
-          (product) =>
-            product.category !== "Office" &&
-            product.category !== "office" &&
-            product.category !== "Accessories" &&
-            product.category !== "Chairs" &&
-            product.subcategory !== "Office",
-        );
-
+        const homeProducts = response.products;
         setProducts(homeProducts);
         setFilteredProducts(homeProducts);
-        setTotalProducts(homeProducts.length);
+        setTotalProducts(response.pagination.total);
 
-        // Open the price filter up to the most expensive product, instead of
-        // a hard-coded cap that silently hides anything priced above it
+        // Calculate max price dynamically based on these 12
         const highestPrice = Math.ceil(
           Math.max(0, ...homeProducts.map((p) => p.price || 0)),
         );
@@ -88,8 +75,7 @@ export default function HomeFurniture() {
           priceRange: { ...prev.priceRange, max: maxPrice },
         }));
 
-        // Extract unique subcategories from home products
-        // Look at subCategory first, then fallback to category
+        // Extract unique subcategories
         const cats = [
           ...new Set(
             homeProducts
@@ -97,21 +83,12 @@ export default function HomeFurniture() {
               .filter(Boolean),
           ),
         ];
-
-        // Filter out 'Home' and 'Office' from categories
         const filteredCats = cats.filter(
-          (cat) =>
-            cat !== "Home" &&
-            cat !== "Office" &&
-            cat !== "office" &&
-            !cat.includes("Office"),
+          (cat) => cat !== "Home" && cat !== "Office",
         );
 
-        if (filteredCats.length > 0) {
-          setCategories(filteredCats);
-        } else {
-          setCategories(["Living Room", "Bedroom", "Dining", "Kids"]);
-        }
+        if (filteredCats.length > 0) setCategories(filteredCats);
+        else setCategories(["Living Room", "Bedroom", "Dining", "Kids"]);
 
         const colors = [
           ...new Set(homeProducts.map((p) => p.color).filter(Boolean)),

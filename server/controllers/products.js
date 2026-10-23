@@ -71,7 +71,12 @@ const getProducts = async (req, res) => {
     
     // Category filter
     if (req.query.category && req.query.category !== 'All') {
-      filter.category = req.query.category;
+      if (req.query.category === 'Home') {
+        // Fetch everything EXCEPT Office
+        filter.category = { $ne: 'Office' };
+      } else {
+        filter.category = req.query.category;
+      }
     }
     
     // Price range filter
@@ -125,22 +130,17 @@ const getProducts = async (req, res) => {
     }
     
     const products = await Product.find(filter)
-      .select('name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock isFeatured') 
+      .select('name price originalPrice discount images coverImage category subcategory averageRating reviewCount stock isFeatured')
       .sort(sortObj)
       .skip(skip)
       .limit(limit);
     
     const total = await Product.countDocuments(filter);
-    
+
     res.json({
       success: true,
       products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
     });
   } catch (error) {
     console.error('Get products error:', error);
