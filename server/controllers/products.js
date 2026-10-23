@@ -307,41 +307,24 @@ const updateProduct = async (req, res) => {
     }
     
     const updateData = req.body;
+
+    // Handle SKU duplicate issue
+    // If the SKU is empty or hasn't changed, remove it from the update payload
+    // so MongoDB doesn't throw a "duplicate key" error.
+    if (!updateData.sku || updateData.sku === product.sku) {
+      delete updateData.sku;
+    }
     
-    // Recalculate pricing if any price field was sent
-    const pricingTouched = ['price', 'originalPrice', 'discount'].some(
-      (k) => updateData[k] !== undefined
-    );
-    if (pricingTouched) {
-      const sentPrice = toNum(updateData.price);
-      const sentDiscount = toNum(updateData.discount);
-      const priceChanged = sentPrice > 0 && sentPrice !== product.price;
-      const discountChanged =
-        sentDiscount > 0 && sentDiscount !== (product.discount || 0);
-      const useDiscount = discountChanged && !priceChanged;
-
-      const pricing = resolvePricing({
-        originalPrice:
-          updateData.originalPrice !== undefined
-            ? updateData.originalPrice
-            : product.originalPrice,
-        price: useDiscount
-          ? undefined
-          : sentPrice > 0
-            ? updateData.price
-            : product.price,
-        discount: useDiscount ? updateData.discount : undefined
-      });
-
-      if (pricing.error) {
-        return res.status(400).json({
-          success: false,
-          message: pricing.error
-        });
+    // Recalculate discount if price or originalPrice changed
+    if (updateData.price || updateData.originalPrice) {
+      const newPrice = updateData.price || product.price;
+      const newOriginalPrice = updateData.originalPrice || product.originalPrice;
+      
+      if (newOriginalPrice && newOriginalPrice > newPrice) {
+        updateData.discount = Math.round(((newOriginalPrice - newPrice) / newOriginalPrice) * 100);
+      } else {
+        updateData.discount = 0;
       }
-      updateData.price = pricing.price;
-      updateData.originalPrice = pricing.originalPrice;
-      updateData.discount = pricing.discount;
     }
     
     // Update status based on stock
@@ -362,22 +345,25 @@ const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error('Update product error:', error);
+    
+    
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: 'SKU already exists'
+        message: 'SKU already exists on another product. Please use a unique SKU.'
       });
     }
-    if (error.name === 'CastError') {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message);
       return res.status(400).json({
         success: false,
-        message: 'Invalid product ID'
+        message: messages.join(', ')
       });
     }
+    
     res.status(500).json({
       success: false,
-      message: 'Failed to update product',
-      error: error.message
+      message: error.message || 'Failed to update product'
     });
   }
 };
