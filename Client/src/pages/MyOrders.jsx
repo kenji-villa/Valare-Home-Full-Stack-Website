@@ -198,8 +198,15 @@ export default function MyOrders() {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "/assets/images/placeholder.jpg";
     if (imagePath.startsWith("http")) return imagePath;
-    if (imagePath.startsWith("/uploads"))
-      return `http://localhost:3001${imagePath}`;
+
+    // Get the base URL from VITE env (e.g., https://your-backend.onrender.com)
+    const baseUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace("/api", "")
+      : "http://localhost:3001";
+
+    if (imagePath.startsWith("/uploads")) {
+      return `${baseUrl}${imagePath}`;
+    }
     return imagePath;
   };
 

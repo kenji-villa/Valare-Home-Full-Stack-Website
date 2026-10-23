@@ -15,7 +15,13 @@ import {
 // flat shape the UI uses ({ id, name, price, image, quantity })
 const resolveImageUrl = (path) => {
   if (!path) return "/assets/images/placeholder.jpg";
-  if (path.startsWith("/uploads")) return `http://localhost:3001${path}`;
+  if (path.startsWith("http")) return path;
+
+  const baseUrl = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace("/api", "")
+    : "http://localhost:3001";
+
+  if (path.startsWith("/uploads")) return `${baseUrl}${path}`;
   return path;
 };
 

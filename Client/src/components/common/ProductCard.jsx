@@ -51,30 +51,22 @@ export default function ProductCard({
     productOriginalPrice = `ETB ${originalPrice}`;
   }
 
-  // Fix: Get the correct image path
   let productImage = "/assets/images/placeholder.jpg";
+  const baseUrl = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace("/api", "")
+    : "http://localhost:3001";
 
-  // Check if image exists and is not null/undefined
   if (coverImage) {
-    // If coverImage starts with /uploads, it's from server upload
-    if (coverImage.startsWith("/uploads")) {
-      productImage = `http://localhost:3001${coverImage}`;
-    } else {
-      productImage = coverImage;
-    }
+    productImage = coverImage.startsWith("/uploads")
+      ? `${baseUrl}${coverImage}`
+      : coverImage;
   } else if (image) {
-    if (image.startsWith("/uploads")) {
-      productImage = `http://localhost:3001${image}`;
-    } else {
-      productImage = image;
-    }
+    productImage = image.startsWith("/uploads") ? `${baseUrl}${image}` : image;
   } else if (images && images.length > 0) {
     const firstImage = images[0];
-    if (firstImage.startsWith("/uploads")) {
-      productImage = `http://localhost:3001${firstImage}`;
-    } else {
-      productImage = firstImage;
-    }
+    productImage = firstImage.startsWith("/uploads")
+      ? `${baseUrl}${firstImage}`
+      : firstImage;
   }
 
   // Get rating and review count

@@ -3,22 +3,22 @@ import OrderStatusBadge from "../Orders/OrderStatusBadge";
 
 export default function ProductTable({ products, onEdit, onDelete, darkMode }) {
   const getImageUrl = (product) => {
+    const baseUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace("/api", "")
+      : "http://localhost:3001";
+
     if (product.coverImage) {
-      // If it's a server path, prepend with the base URL
-      if (product.coverImage.startsWith("/uploads/")) {
-        return `http://localhost:3001${product.coverImage}`;
-      }
-      return product.coverImage;
+      return product.coverImage.startsWith("/uploads/")
+        ? `${baseUrl}${product.coverImage}`
+        : product.coverImage;
     }
     if (product.images && product.images.length > 0) {
-      if (product.images[0].startsWith("/uploads/")) {
-        return `http://localhost:3001${product.images[0]}`;
-      }
-      return product.images[0];
+      return product.images[0].startsWith("/uploads/")
+        ? `${baseUrl}${product.images[0]}`
+        : product.images[0];
     }
     return "/assets/images/placeholder.jpg";
   };
-
   return (
     <div
       className={`${darkMode ? "bg-gray-800 border-gray-700" : "bg-white"} rounded-lg shadow-sm border overflow-hidden`}
